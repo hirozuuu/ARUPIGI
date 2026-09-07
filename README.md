@@ -4,7 +4,9 @@
 
 ## 遊ぶ
 
-Windowsでは `build/ARUPIGI.exe` を起動します。ゲームデータは実行ファイルに含まれます。Godotエディタから遊ぶ場合は `project.godot` をGodot **4.6.x**で開き、初回インポートが終わってから **F5**でプロジェクトを実行してください。レンダラーはGL Compatibilityです。
+`project.godot` をGodot **4.6.x**で開き、初回インポートが終わってから **F5**でプロジェクトを実行してください。レンダラーはGL Compatibilityです。
+
+現段階ではWindows向けビルドの作成・テストは実施しません。将来Windowsビルドを作成する段階で、書き出しと書き出した実行ファイルの検証を実施します。
 
 | キー | 操作 |
 | --- | --- |
@@ -33,7 +35,9 @@ New-Item -ItemType Directory -Force build | Out-Null
 
 最後のコマンドは実際のGPU描画を使い、タイトル・野原・メニュー・町・洞窟・戦闘・攻撃・リサイズ画面を `build/screenshots/` に保存します。`--headless` は付けません。
 
-## Windows版を再作成
+## 将来Windowsビルドを作成する際の手順（現段階では実施しない）
+
+この節は将来用の手順です。現段階の開発・完了条件にはWindowsビルドの作成、埋め込みパックの統合・描画検証、実行ファイルの起動・操作確認を含めません。Windowsビルドを作成する段階になったら、以下の作成・検証を一通り実施してください。
 
 Godotと同じバージョンのWindowsエクスポートテンプレートが必要です。エディタの「プロジェクト → エクスポート → Windows Desktop」または次のコマンドで作成できます。起動中のARUPIGIを先に閉じてください。
 
@@ -41,14 +45,14 @@ Godotと同じバージョンのWindowsエクスポートテンプレートが�
 & $godotExe --headless --path . --log-file ./build/export.log --export-release 'Windows Desktop' ./build/ARUPIGI.exe
 ```
 
-実行ファイルに埋め込まれたデータも検証できます。
+作成後は実行ファイルに埋め込まれたデータを検証します。
 
 ```powershell
 $integrationScript = Join-Path (Get-Location) 'tests/integration_test.gd'
 & $godotExe --headless --main-pack ./build/ARUPIGI.exe --log-file ./build/packed-integration.log --script $integrationScript
 ```
 
-書き出しパックの描画も確認する場合は、`--script` に `tests/render_smoke.gd` の絶対パスを渡し、`--headless` を外します。出力先の絶対パスを末尾の `--` の後に指定できます。
+書き出しパックの描画も確認します。`--script` に `tests/render_smoke.gd` の絶対パスを渡し、`--headless` を外します。出力先の絶対パスを末尾の `--` の後に指定できます。
 
 ```powershell
 $renderScript = Join-Path (Get-Location) 'tests/render_smoke.gd'
@@ -56,7 +60,9 @@ $captureDirectory = Join-Path (Get-Location) 'build/packed-screenshots'
 & $godotExe --main-pack ./build/ARUPIGI.exe --log-file ./build/packed-render.log --script $renderScript -- $captureDirectory
 ```
 
-`build/` と `.godot/` は生成物のためGit管理対象外です。ソースからチェックアウトした場合、実行ファイルは上記手順で生成してください。
+最後に `build/ARUPIGI.exe` をWindowsアプリとして起動し、開始・探索・メニューなどの入力と表示を確認します。ゲームデータは実行ファイルに含まれます。
+
+`build/` と `.godot/` は生成物のためGit管理対象外です。現段階ではソースからチェックアウトした場合もWindows実行ファイルの生成は不要です。
 
 ## 調整する場所
 
