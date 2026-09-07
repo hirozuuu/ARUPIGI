@@ -81,3 +81,5 @@ $captureDirectory = Join-Path (Get-Location) 'build/packed-screenshots'
 状態遷移は `scripts/main.gd`、探索は `exploration.gd`・`map_controller.gd`・`player.gd`、進行データは `game_session.gd`、遭遇は `encounter_controller.gd`、戦闘解決は `battle_model.gd` に分離しています。マップ・敵固有の値はResourceで定義します。
 
 Noto Sans JPの再配布ライセンスは `assets/fonts/OFL.txt`、独自SVGの説明は `assets/art/README.md` にあります。詳細は [実装計画](docs/implementation-plan.md) と [検証記録](docs/verification.md) を参照してください。
+
+追加開発の方針は [マップタイルエディタ実装計画](docs/map-editor-implementation-plan.md) を参照してください。Godotエディタ内で既存マップの地形を配置・消去し、元に戻す操作と素材追加に対応する計画です（未実装）。
