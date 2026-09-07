@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="MapData" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/map_data.gd" id="map_script"]
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="enemy_script"]
+[ext_resource type="Resource" path="res://data/terrains/wall.tres" id="wall"]
+[ext_resource type="Resource" path="res://data/terrains/plain.tres" id="plain"]
+[ext_resource type="Resource" path="res://data/terrains/building.tres" id="building"]
+[ext_resource type="Resource" path="res://data/terrains/floor.tres" id="floor"]
+
+[resource]
+script = ExtResource("map_script")
+id = "town"
+display_name = "こもれびの町"
+width = 20
+height = 15
+rows = PackedStringArray("####################",
+"#..................#",
+"#..BBB.......BBB...#",
+"#..BBB.......BBB...#",
+"#..BBB.......BBB...#",
+"#.......fffff......#",
+"#.......fffff......#",
+"#..ffffffffff......#",
+"#..f....fffff......#",
+"#..f......f..BBB...#",
+"#..BBB....f..BBB...#",
+"#..BBB....f..BBB...#",
+"#.........f........#",
+"#.......fffff......#",
+"####################")
+terrains = {"#": ExtResource("wall"),
+".": ExtResource("plain"),
+"B": ExtResource("building"),
+"f": ExtResource("floor")}
+spawns = {"entry": Vector2i(10, 11),
+"recovery": Vector2i(10, 7)}
+portals = Array[Dictionary]([{"cell": Vector2i(10, 13), "target_map": "world", "target_spawn": "from_town"}])
+healing_cells = Array[Vector2i]([Vector2i(10, 5)])
+encounters_enabled = false
+enemies = Array[ExtResource("enemy_script")]([])

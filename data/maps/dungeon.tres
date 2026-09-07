@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="MapData" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/map_data.gd" id="map_script"]
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="enemy_script"]
+[ext_resource type="Resource" path="res://data/terrains/wall.tres" id="wall"]
+[ext_resource type="Resource" path="res://data/terrains/floor.tres" id="floor"]
+[ext_resource type="Resource" path="res://data/enemies/mossling.tres" id="mossling"]
+[ext_resource type="Resource" path="res://data/enemies/pebble.tres" id="pebble"]
+
+[resource]
+script = ExtResource("map_script")
+id = "dungeon"
+display_name = "しずかな岩穴"
+width = 20
+height = 15
+rows = PackedStringArray("####################",
+"####################",
+"##fffff####fffffff##",
+"##fffff####fffffff##",
+"##ffffffffff#ffff###",
+"###f#######f########",
+"###f#######f########",
+"###fffff###ffffff###",
+"###f###f#######ff###",
+"###f###fffff###ff###",
+"###f#######f###ff###",
+"##ffff#####ffffff###",
+"##ffff##############",
+"##ffff##############",
+"####################")
+terrains = {"#": ExtResource("wall"), "f": ExtResource("floor")}
+spawns = {"entry": Vector2i(3, 11)}
+portals = Array[Dictionary]([{"cell": Vector2i(3, 13), "target_map": "world", "target_spawn": "from_dungeon"}])
+healing_cells = Array[Vector2i]([])
+encounters_enabled = true
+enemies = Array[ExtResource("enemy_script")]([ExtResource("mossling"), ExtResource("pebble")])

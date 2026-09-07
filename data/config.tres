@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="GameConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/game_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+tile_size = 48
+move_speed = 192.0
+max_hp = 30
+attack_min = 5
+attack_max = 8
+safety_tiles = 4.0
+encounter_chance = 0.0625
+escape_chance = 0.6
+message_seconds = 0.65
+transition_seconds = 0.2

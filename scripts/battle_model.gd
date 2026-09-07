@@ -1,0 +1,62 @@
+class_name BattleModel
+extends RefCounted
+## Resolves one command synchronously; the battle view sequences its messages.
+
+enum Outcome { ONGOING, VICTORY, ESCAPED, DEFEAT }
+
+var enemy: EnemyData
+var enemy_hp: int = 0
+var outcome: Outcome = Outcome.ONGOING
+var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+
+
+func _init() -> void:
+	rng.randomize()
+
+
+func setup(enemy_data: EnemyData) -> void:
+	enemy = enemy_data
+	enemy_hp = maxi(1, enemy.max_hp)
+	outcome = Outcome.ONGOING
+
+
+func attack(session: GameSession, config: GameConfig) -> Array[String]:
+	var messages: Array[String] = []
+	if outcome != Outcome.ONGOING or enemy == null:
+		return messages
+	var damage: int = _damage_roll(config.attack_min, config.attack_max)
+	enemy_hp = maxi(0, enemy_hp - damage)
+	messages.append("あなたの こうげき！\n%sに %d のダメージ。" % [enemy.display_name, damage])
+	if enemy_hp == 0:
+		outcome = Outcome.VICTORY
+		messages.append("%sを たおした！" % enemy.display_name)
+	else:
+		_retaliate(session, messages)
+	return messages
+
+
+func escape(session: GameSession, config: GameConfig) -> Array[String]:
+	var messages: Array[String] = []
+	if outcome != Outcome.ONGOING or enemy == null:
+		return messages
+	var chance: float = clampf(config.escape_chance, 0.0, 1.0)
+	if chance >= 1.0 or (chance > 0.0 and rng.randf() < chance):
+		outcome = Outcome.ESCAPED
+		messages.append("うまく にげきれた！")
+	else:
+		messages.append("にげられなかった！")
+		_retaliate(session, messages)
+	return messages
+
+
+func _retaliate(session: GameSession, messages: Array[String]) -> void:
+	var damage: int = _damage_roll(enemy.attack_min, enemy.attack_max)
+	session.damage(damage)
+	messages.append("%sの こうげき！\nあなたに %d のダメージ。" % [enemy.display_name, damage])
+	if session.hp == 0:
+		outcome = Outcome.DEFEAT
+		messages.append("ちからつきて しまった……\n町で ひとやすみしよう。")
+
+
+func _damage_roll(minimum: int, maximum: int) -> int:
+	return rng.randi_range(maxi(0, minimum), maxi(maxi(0, minimum), maximum))
