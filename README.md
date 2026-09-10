@@ -30,6 +30,7 @@ New-Item -ItemType Directory -Force build | Out-Null
 & $godotExe --headless --path . --log-file ./build/import.log --editor --quit
 & $godotExe --headless --path . --log-file ./build/logic.log --script res://tests/logic_test.gd
 & $godotExe --headless --path . --log-file ./build/integration.log --script res://tests/integration_test.gd
+& $godotExe --headless --path . --log-file ./build/map-editor-test.log --script res://tests/map_editor_test.gd
 & $godotExe --path . --log-file ./build/render.log --script res://tests/render_smoke.gd
 ```
 
@@ -82,4 +83,4 @@ $captureDirectory = Join-Path (Get-Location) 'build/packed-screenshots'
 
 Noto Sans JPの再配布ライセンスは `assets/fonts/OFL.txt`、独自SVGの説明は `assets/art/README.md` にあります。詳細は [実装計画](docs/implementation-plan.md) と [検証記録](docs/verification.md) を参照してください。
 
-追加開発の方針は [マップタイルエディタ実装計画](docs/map-editor-implementation-plan.md) を参照してください。Godotエディタ内で既存マップの地形を配置・消去し、元に戻す操作と素材追加に対応する計画です（未実装）。
+Godot上部の **マップ** から既存マップの地形を配置・消去できます。Undo／Redo、保存、素材追加、検証、未保存データの復旧に対応しています。[操作ガイド](docs/map-editor-guide.md)、[検証記録](docs/map-editor-verification.md)、[実装計画](docs/map-editor-implementation-plan.md) を参照してください。

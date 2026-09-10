@@ -23,6 +23,10 @@ window/size/window_width_override=960
 window/size/window_height_override=640
 window/stretch/mode="canvas_items"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/map_editor/plugin.cfg")
+
 [gui]
 
 theme/default_font_multichannel_signed_distance_field=true
@@ -36,5 +40,4 @@ theme/default_font_multichannel_signed_distance_field=true
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-textures/default_filters/use_nearest_mipmap_filter=false
 environment/defaults/default_clear_color=Color(0.065, 0.085, 0.11, 1)

@@ -114,6 +114,9 @@ func _center(cell: Vector2i) -> Vector2:
 func _validate_maps() -> void:
 	for map_id: String in MAPS:
 		var map: MapData = MAPS[map_id]
+		var report := MapValidator.validate(map, MAPS)
+		_check(report.errors.is_empty(), "%s shared format validation: %s" % [map_id, str(report.errors)])
+		_check(report.warnings.is_empty(), "%s shared route validation: %s" % [map_id, str(report.warnings)])
 		_check(map.id == map_id and map.width > 0 and map.height > 0 and map.rows.size() == map.height, "%s has matching id and height" % map_id)
 		var rows_valid: bool = true
 		var terrains_valid: bool = true

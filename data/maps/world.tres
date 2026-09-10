@@ -1,59 +1,42 @@
-[gd_resource type="Resource" script_class="MapData" load_steps=9 format=3]
+[gd_resource type="Resource" script_class="MapData" format=3 uid="uid://dp5bbf5fdx6ri"]
 
-[ext_resource type="Script" path="res://scripts/data/map_data.gd" id="map_script"]
-[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="enemy_script"]
-[ext_resource type="Resource" path="res://data/terrains/plain.tres" id="plain"]
-[ext_resource type="Resource" path="res://data/terrains/mountain.tres" id="mountain"]
-[ext_resource type="Resource" path="res://data/terrains/hill.tres" id="hill"]
-[ext_resource type="Resource" path="res://data/terrains/sand.tres" id="sand"]
-[ext_resource type="Resource" path="res://data/enemies/mossling.tres" id="mossling"]
-[ext_resource type="Resource" path="res://data/enemies/pebble.tres" id="pebble"]
+[ext_resource type="Script" uid="uid://u563cmq6w3b0" path="res://scripts/data/enemy_data.gd" id="1_63011"]
+[ext_resource type="Resource" path="res://data/enemies/mossling.tres" id="2_8yqni"]
+[ext_resource type="Resource" path="res://data/enemies/pebble.tres" id="3_281i5"]
+[ext_resource type="Script" uid="uid://b4bbxo0h14g56" path="res://scripts/data/map_data.gd" id="4_llkh1"]
+[ext_resource type="Resource" path="res://data/terrains/plain.tres" id="5_265x4"]
+[ext_resource type="Resource" path="res://data/terrains/mountain.tres" id="6_2dgnp"]
+[ext_resource type="Resource" path="res://data/terrains/hill.tres" id="7_ibnm2"]
+[ext_resource type="Resource" path="res://data/terrains/sand.tres" id="8_g6dwu"]
+[ext_resource type="Resource" path="res://data/terrains/building.tres" id="9_06xfa"]
 
 [resource]
-script = ExtResource("map_script")
+script = ExtResource("4_llkh1")
 id = "world"
 display_name = "はじまりの野原"
 width = 40
 height = 30
-rows = PackedStringArray("........................................",
-"...........................^^^^^^^......",
-".....^^^^................^^^^^^^^^^.....",
-"...^^^^^^^..............^^^^hhhh^^^.....",
-"..^^^^h^^^..............^^hhhhhhh^^.....",
-"..^^hhh^^...............^hhhhhhhh^^.....",
-"...^hhh^.................hhhhhhhh^^.....",
-"...hhhhh..................hhhhhhh^^.....",
-"....hhhh.....................shhh^......",
-".............................s..........",
-".............................s..........",
-"........................................",
-"........................................",
-"........................................",
-"........................................",
-"........................................",
-"........................................",
-"......hhhhh.............................",
-".....hhhhhhh..............ssssssss......",
-"....hhhhh^^^.............ssssssssss.....",
-"....hhhh^^^^............ssssssssssss....",
-".....hhh^^^^............ssssssssssss....",
-".....hhh^^^^.............ssssssssss.....",
-"......hh^^^^..............ssssssss......",
-".......h^^^^......^^^^^....ssssss.......",
-"........^^^^....^^^^^^^^................",
-"...............^^^^^^^^^^...............",
-"...............^^^^^^.^^^...............",
-"...............^^^^^...^^...............",
-"...............^^^^.....^...............")
-terrains = {".": ExtResource("plain"),
-"^": ExtResource("mountain"),
-"h": ExtResource("hill"),
-"s": ExtResource("sand")}
-spawns = {"start": Vector2i(20, 15),
+rows = PackedStringArray("........................................", "...........................^^^^^^^......", ".....^^^^................^^^^^^^^^^.....", "...^^^^^^^..............^^^^hhhh^^^.....", "..^^^^h^^^..............^^hhhhhhh^^.....", "..^^hhh^^...............^hhhhhhhh^^.....", "...^hhh^.................hhhhhhhh^^.....", "...hhhhh..................hhhhhhh^^.....", "....hhhh.....................shhh^......", ".............................s..........", ".............................s..........", "........................................", "........................................", "........................................", "........................................", "........................................", "........................................", "......hhhhh.............................", ".....hhhhhhh..............ssssssss......", "....hhhhh^^^.............ssssssssss.....", "....hhhh^^^^............ssssssssssss....", ".....hhh^^^^............ssssssssssss....", ".....hhh^^^^.............ssssssssss.....", "......hh^^^^..............ssssssss......", ".......h^^^^......^^^^^....ssssss.......", "........^^^^....^^^^^^^^................", "...............^^^^^^^^^^...............", "...............^^^^^^.^^^...............", "...............^^^^^...^^...............", "...............^^^^.....^...............")
+terrains = {
+".": ExtResource("5_265x4"),
+"^": ExtResource("6_2dgnp"),
+"a": ExtResource("9_06xfa"),
+"h": ExtResource("7_ibnm2"),
+"s": ExtResource("8_g6dwu")
+}
+spawns = {
+"from_dungeon": Vector2i(29, 10),
 "from_town": Vector2i(17, 15),
-"from_dungeon": Vector2i(29, 10)}
-portals = Array[Dictionary]([{"cell": Vector2i(17, 13), "target_map": "town", "target_spawn": "entry"},
-{"cell": Vector2i(29, 8), "target_map": "dungeon", "target_spawn": "entry"}])
-healing_cells = Array[Vector2i]([])
+"start": Vector2i(20, 15)
+}
+portals = Array[Dictionary]([{
+"cell": Vector2i(17, 13),
+"target_map": "town",
+"target_spawn": "entry"
+}, {
+"cell": Vector2i(29, 8),
+"target_map": "dungeon",
+"target_spawn": "entry"
+}])
 encounters_enabled = true
-enemies = Array[ExtResource("enemy_script")]([ExtResource("mossling"), ExtResource("pebble")])
+enemies = Array[ExtResource("1_63011")]([ExtResource("2_8yqni"), ExtResource("3_281i5")])
