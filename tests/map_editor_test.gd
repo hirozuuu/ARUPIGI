@@ -84,13 +84,17 @@ func _test_editing() -> void:
 
 func _test_keys() -> void:
 	var doc := Document.new()
-	doc.open(fixture("keys"))
+	# Keep key allocation independent of edits to the shipped world map.
+	var key_map := Document.copy_map(MAPS.world)
+	key_map.terrains = {".": plain, "a": wall}
+	key_map.rows.fill(".".repeat(key_map.width))
+	doc.open(fixture("keys", key_map))
 	var terrain := TerrainData.new()
 	terrain.id = "new-terrain"
 	terrain.texture = plain.texture
-	check(doc.key_for(terrain) == "a", "New terrain uses deterministic first unused alphanumeric key")
+	check(doc.key_for(terrain) == "b", "New terrain uses deterministic first unused alphanumeric key")
 	paint(doc, terrain, [Vector2i(0, 0)])
-	check(doc.key_for(terrain) == "a", "Existing mapping is reused")
+	check(doc.key_for(terrain) == "b", "Existing mapping is reused")
 	doc.data.terrains["z"] = terrain
 	doc.data.rows[0] = "z" + doc.data.rows[0].substr(1)
 	var version := doc.history.get_version()
