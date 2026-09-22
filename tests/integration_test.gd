@@ -30,12 +30,10 @@ func _run() -> void:
 	config.message_seconds = 0.04
 	game = load("res://scenes/main.tscn").instantiate()
 	root.add_child(game)
-	await _frames(2)
-	_check(game.state == MainScript.State.TITLE, "Main scene starts on title")
-	await _tap(KEY_ENTER, true)
-	await _wait_state(MainScript.State.EXPLORATION)
-	_check(game.session.map_id == "world" and game.session.hp == config.max_hp, "Logical-only Enter starts a fresh world session")
+	_check(game.state == MainScript.State.EXPLORATION and game.exploration.visible, "Main scene starts directly in visible exploration without input")
+	_check(game.session.map_id == "world" and game.session.hp == config.max_hp, "Startup initializes a fresh world session")
 	_check(game.session.position == MAPS.world.spawn_position("start", config.tile_size), "New game starts at resource spawn")
+	_check(game.encounters.safe_remaining == config.tile_size * config.safety_tiles and game.encounters.distance_remainder == 0.0, "Startup initializes encounter safety and distance")
 	await _test_movement()
 	await _test_pause()
 	await _test_portals()
@@ -218,6 +216,14 @@ func _test_pause() -> void:
 	_check(game.encounters.safe_remaining == 19.0 and game.encounters.distance_remainder == 11.0, "Menu preserves safe distance and partial encounter distance")
 	await _tap(KEY_ESCAPE)
 	_check(game.state == MainScript.State.EXPLORATION and game.encounters.safe_remaining == 19.0 and game.encounters.distance_remainder == 11.0, "Closing menu resumes without resetting encounter state")
+	game.session.damage(3)
+	var hp_before: int = game.session.hp
+	for direction in [KEY_DOWN, KEY_UP, KEY_S, KEY_W]:
+		await _tap(KEY_ESCAPE)
+		await _tap(direction)
+		await _tap(KEY_ENTER, true)
+		_check(game.state == MainScript.State.EXPLORATION and game.exploration.visible, "Menu direction input followed by logical Enter resumes exploration")
+		_check(game.session.hp == hp_before and game.session.position == position_before and game.encounters.safe_remaining == 19.0 and game.encounters.distance_remainder == 11.0, "Menu confirmation preserves HP, position and encounter progress")
 
 
 func _cross_portal(map_id: String, portal_index: int) -> void:
@@ -372,11 +378,12 @@ func _test_battles() -> void:
 
 func _test_restart() -> void:
 	game.session.damage(8)
-	await _tap(KEY_ESCAPE)
-	await _tap(KEY_DOWN)
-	await _tap(KEY_ENTER)
-	_check(game.state == MainScript.State.TITLE, "Menu command returns to title")
-	await _tap(KEY_ENTER)
-	await _wait_state(MainScript.State.EXPLORATION)
+	game.encounters.safe_remaining = 0.0
+	game.encounters.distance_remainder = 11.0
+	game.queue_free()
+	await process_frame
+	game = load("res://scenes/main.tscn").instantiate()
+	root.add_child(game)
+	_check(game.state == MainScript.State.EXPLORATION and game.exploration.visible, "Recreating the main scene immediately starts exploration")
 	_check(game.session.map_id == "world" and game.session.position == MAPS.world.spawn_position("start", config.tile_size) and game.session.hp == config.max_hp, "Restart resets HP and map position")
 	_check(game.encounters.safe_remaining == config.tile_size * config.safety_tiles and game.encounters.distance_remainder == 0.0, "Restart clears encounter remainder and restores safety")

@@ -12,9 +12,6 @@ func _initialize() -> void:
 func _run() -> void:
 	var game: Node = load("res://scenes/main.tscn").instantiate()
 	root.add_child(game)
-	await _capture("title")
-	game.start_game()
-	await create_timer(0.6).timeout
 	await _capture("world")
 	game._set_state(game.State.MENU)
 	await _capture("menu")
@@ -32,7 +29,7 @@ func _run() -> void:
 	await _capture("resized")
 	game.queue_free()
 	await process_frame
-	print("PASS: 8 Compatibility renderer screenshots saved under %s." % output_dir)
+	print("PASS: 7 Compatibility renderer screenshots saved under %s." % output_dir)
 	quit()
 
 func _capture(label: String) -> void:

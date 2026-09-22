@@ -6,7 +6,7 @@ const INK := Color("172d32")
 const MUTED := Color("afb9ac")
 const GOLD := Color("edc77d")
 var font: Font = preload("res://assets/fonts/ui_font.tres")
-var screen: String = "title"
+var screen: String = "exploration"
 var hp: int = 30
 var max_hp: int = 30
 var map_name: String = ""
@@ -52,9 +52,7 @@ func option(value: String, x: float, y: float, index: int) -> void:
 
 func _draw() -> void:
 	draw_set_transform(Vector2.ZERO, 0, size / Vector2(960, 640))
-	if screen == "title":
-		_draw_title()
-	elif screen == "battle":
+	if screen == "battle":
 		_draw_battle()
 	else:
 		panel(Rect2(22, 20, 240, 87))
@@ -70,35 +68,16 @@ func _draw() -> void:
 			centered("WASD / 矢印  移動     印を踏むと出入り・回復", 600, 18, MUTED)
 		if screen == "menu":
 			draw_rect(Rect2(0, 0, 960, 640), Color(0.035, 0.06, 0.07, 0.76))
-			panel(Rect2(214, 100, 532, 440))
+			panel(Rect2(214, 100, 532, 380))
 			text_at("旅のメニュー", Vector2(255, 156), 30)
 			text_at("旅人   HP  %d / %d" % [hp, max_hp], Vector2(255, 204), 24, GOLD)
 			draw_line(Vector2(255, 227), Vector2(705, 227), MUTED, 1)
-			text_at("WASD / 矢印キー ： 歩く・項目を選ぶ", Vector2(255, 266), 20)
+			text_at("WASD / 矢印キー ： 歩く・戦闘の行動を選ぶ", Vector2(255, 266), 20)
 			text_at("Enter ： 決定     Esc ： メニューを閉じる", Vector2(255, 302), 20)
 			text_at("町の泉の印で回復。セーブ機能はありません。", Vector2(255, 343), 18, MUTED)
 			option("ゲームに戻る", 264, 410, 0)
-			option("タイトルに戻る", 264, 462, 1)
 	if fade > 0:
 		draw_rect(Rect2(0, 0, 960, 640), Color(0.035, 0.05, 0.065, fade))
-
-func _draw_title() -> void:
-	draw_rect(Rect2(0, 0, 960, 640), PAPER)
-	draw_colored_polygon(PackedVector2Array([Vector2(0, 370), Vector2(160, 326), Vector2(350, 379), Vector2(540, 331), Vector2(790, 353), Vector2(960, 297), Vector2(960, 640), Vector2(0, 640)]), Color("b5c39e"))
-	draw_colored_polygon(PackedVector2Array([Vector2(0, 476), Vector2(270, 401), Vector2(495, 470), Vector2(740, 403), Vector2(960, 450), Vector2(960, 640), Vector2(0, 640)]), Color("819c7b"))
-	for i in 20:
-		var x := float(i * 51 + 14)
-		var y := float(435 + (i * 37) % 169)
-		draw_polyline(PackedVector2Array([Vector2(x - 5, y - 8), Vector2(x, y), Vector2(x + 5, y - 12)]), Color("536d5c"), 2, true)
-	centered("A  S M A L L  H A N D - D R A W N  A D V E N T U R E", 88, 16, Color("597263"))
-	centered("ARUPIGI", 208, 82, INK)
-	centered("あるぴぎ  ─  小さな旅のはじまり", 263, 24, INK)
-	draw_polyline(PackedVector2Array([Vector2(325, 282), Vector2(480, 287), Vector2(635, 281)]), Color("947d55"), 2, true)
-	draw_texture_rect(preload("res://assets/art/player.svg"), Rect2(448, 310, 64, 80), false)
-	panel(Rect2(330, 410, 300, 85))
-	option("はじめる", 393, 463, 0)
-	centered("Enter  決定", 532, 20, INK)
-	centered("草原を歩き、町で休み、岩の洞へ。", 590, 18, INK)
 
 func _draw_battle() -> void:
 	draw_rect(Rect2(0, 0, 960, 640), Color("263c40"))

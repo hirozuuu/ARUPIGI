@@ -1,13 +1,13 @@
 extends Node
 
-enum State { TITLE, EXPLORATION, MENU, TRANSITION, BATTLE }
+enum State { EXPLORATION, MENU, TRANSITION, BATTLE }
 const CONFIG: GameConfig = preload("res://data/config.tres")
 const MAPS := {
 	"world": preload("res://data/maps/world.tres"),
 	"town": preload("res://data/maps/town.tres"),
 	"dungeon": preload("res://data/maps/dungeon.tres"),
 }
-var state: State = State.TITLE
+var state: State = State.EXPLORATION
 var session := GameSession.new()
 var encounters := EncounterController.new()
 var battle := BattleModel.new()
@@ -28,13 +28,17 @@ func _ready() -> void:
 	get_window().min_size = Vector2i(720, 480)
 	exploration = Exploration.new()
 	add_child(exploration)
-	exploration.hide()
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	ui = GameUI.new()
 	layer.add_child(ui)
 	encounters.rng.randomize()
 	battle.rng.randomize()
+	session.reset(CONFIG, MAPS.world.spawn_position("start", CONFIG.tile_size))
+	encounters.reset(CONFIG)
+	exploration.enter(MAPS[session.map_id], session.position, CONFIG)
+	ui.notice = "旅のはじまり。屋根の印は町、岩の印は洞窟。"
+	notice_remaining = 5.0
 	_refresh_ui()
 
 func _install_inputs() -> void:
@@ -69,7 +73,7 @@ func _input(event: InputEvent) -> void:
 			_set_state(State.EXPLORATION)
 		_refresh_ui()
 		return
-	if state == State.MENU or (state == State.BATTLE and ui.battle_phase == "command"):
+	if state == State.BATTLE and ui.battle_phase == "command":
 		if event.is_action_pressed("move_up") or event.is_action_pressed("move_down"):
 			ui.selected = 1 - ui.selected
 			ui.queue_redraw()
@@ -77,15 +81,8 @@ func _input(event: InputEvent) -> void:
 		return
 	confirm_armed = false
 	match state:
-		State.TITLE:
-			start_game()
 		State.MENU:
-			if ui.selected == 0:
-				_set_state(State.EXPLORATION)
-			else:
-				exploration.hide()
-				ui.selected = 0
-				_set_state(State.TITLE)
+			_set_state(State.EXPLORATION)
 		State.BATTLE:
 			if ui.battle_phase == "command":
 				_run_action()
@@ -96,14 +93,6 @@ func _input(event: InputEvent) -> void:
 func _set_state(next: State) -> void:
 	state = next
 	confirm_armed = false
-
-func start_game() -> void:
-	session.reset(CONFIG, MAPS.world.spawn_position("start", CONFIG.tile_size))
-	encounters.reset(CONFIG)
-	ui.selected = 0
-	ui.notice = "旅のはじまり。屋根の印は町、岩の印は洞窟。"
-	notice_remaining = 5.0
-	_begin_transition(session.map_id, session.position)
 
 func _begin_transition(map_id: String, point: Vector2) -> void:
 	pending_map = map_id
@@ -197,7 +186,7 @@ func _finish_battle() -> void:
 		_set_state(State.EXPLORATION)
 
 func _refresh_ui() -> void:
-	ui.screen = {State.TITLE: "title", State.EXPLORATION: "exploration", State.MENU: "menu", State.TRANSITION: "exploration", State.BATTLE: "battle"}[state]
+	ui.screen = {State.EXPLORATION: "exploration", State.MENU: "menu", State.TRANSITION: "exploration", State.BATTLE: "battle"}[state]
 	ui.hp = session.hp
 	ui.max_hp = session.max_hp
 	ui.map_name = MAPS[session.map_id].display_name if MAPS.has(session.map_id) else ""
