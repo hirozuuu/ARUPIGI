@@ -18,6 +18,7 @@ var battle_text: String = ""
 var battle_phase: String = "command"
 var flash: float = 0.0
 var fade: float = 0.0
+var battle_rect: Rect2
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -51,10 +52,10 @@ func option(value: String, x: float, y: float, index: int) -> void:
 	text_at(value, Vector2(x + 25, y), 24, GOLD if selected == index else PAPER)
 
 func _draw() -> void:
-	draw_set_transform(Vector2.ZERO, 0, size / Vector2(960, 640))
 	if screen == "battle":
 		_draw_battle()
 	else:
+		draw_set_transform(Vector2.ZERO, 0, size / Vector2(960, 640))
 		panel(Rect2(22, 20, 240, 87))
 		text_at(map_name, Vector2(40, 53), 22)
 		text_at("旅人  HP  %02d / %02d" % [hp, max_hp], Vector2(40, 84), 20, GOLD)
@@ -80,28 +81,29 @@ func _draw() -> void:
 		draw_rect(Rect2(0, 0, 960, 640), Color(0.035, 0.05, 0.065, fade))
 
 func _draw_battle() -> void:
-	draw_rect(Rect2(0, 0, 960, 640), Color("263c40"))
-	for i in 12:
-		var x := float(i * 95 - 60)
-		draw_polyline(PackedVector2Array([Vector2(x, 345), Vector2(x + 65, 250 + i % 3 * 19), Vector2(x + 136, 345)]), Color("53625d"), 2, true)
-	draw_colored_polygon(PackedVector2Array([Vector2(0, 354), Vector2(210, 336), Vector2(490, 351), Vector2(730, 331), Vector2(960, 351), Vector2(960, 640), Vector2(0, 640)]), Color("657966"))
-	panel(Rect2(28, 24, 258, 75))
-	text_at("旅人   HP  %02d / %02d" % [hp, max_hp], Vector2(47, 71), 23, GOLD)
-	text_at("小さな旅の戦い", Vector2(721, 64), 20, MUTED)
+	var r := battle_rect
+	var shade := Color(0.035, 0.06, 0.07, 0.62)
+	draw_rect(Rect2(0, 0, size.x, maxf(0.0, r.position.y)), shade)
+	draw_rect(Rect2(0, r.end.y, size.x, maxf(0.0, size.y - r.end.y)), shade)
+	draw_rect(Rect2(0, r.position.y, maxf(0.0, r.position.x), r.size.y), shade)
+	draw_rect(Rect2(r.end.x, r.position.y, maxf(0.0, size.x - r.end.x), r.size.y), shade)
+	var scale_factor := minf(size.x / 960.0, size.y / 640.0)
+	draw_rect(r, PAPER, false, maxf(2.0, 3.0 * scale_factor))
+	var origin := Vector2((size.x - 960.0 * scale_factor) * 0.5, 0.0)
+	draw_set_transform(origin, 0.0, Vector2.ONE * scale_factor)
+	panel(Rect2(28, 24, 240, 75))
+	text_at("旅人  HP  %02d / %02d" % [hp, max_hp], Vector2(45, 71), 22, GOLD)
 	if enemy != null:
-		centered(enemy.display_name, 146, 28)
-		draw_set_transform(Vector2.ZERO, 0, size / Vector2(960, 640))
-		draw_style_box(_panel_style(Color("455d50")), Rect2(372, 353, 216, 16))
-		var tint := Color(1.0, 0.6, 0.5) if flash > 0.0 else Color.WHITE
-		if battle_phase != "result" or enemy_hp > 0:
-			draw_texture_rect(enemy.texture, Rect2(370, 172, 220, 210), false, tint)
-	panel(Rect2(28, 423, 272, 188))
-	option("こうげき", 55, 484, 0)
-	option("にげる", 55, 536, 1)
-	text_at("Enter  決定", Vector2(80, 578), 17, MUTED)
-	panel(Rect2(319, 423, 613, 188))
-	text_at(battle_text, Vector2(344, 478), 23)
+		draw_rect(Rect2(382, 43, 196, 43), Color(0.035, 0.06, 0.07, 0.72))
+		centered(enemy.display_name, 79, 25)
+	panel(Rect2(28, 440, 272, 172))
+	option("こうげき", 55, 492, 0)
+	option("にげる", 55, 538, 1)
+	text_at("WASD / 矢印  移動・上下で選択", Vector2(48, 575), 15, MUTED)
+	text_at("Enter  決定", Vector2(80, 599), 16, MUTED)
+	panel(Rect2(319, 440, 613, 172))
+	text_at(battle_text, Vector2(344, 482), 22)
 	if battle_phase == "result":
-		text_at("Enter を押して旅に戻る  ▸", Vector2(565, 579), 20, GOLD)
+		text_at("Enter を押して旅に戻る  ▸", Vector2(565, 588), 19, GOLD)
 	elif battle_phase == "command":
-		text_at("行動を選んでください", Vector2(344, 572), 19, MUTED)
+		text_at("行動を選んでください", Vector2(344, 588), 19, MUTED)

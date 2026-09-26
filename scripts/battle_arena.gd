@@ -1,0 +1,97 @@
+class_name BattleArena
+extends Node2D
+## One fixed world-space arena shared by the physics bodies and the overlay.
+
+const BASE_RECT := Rect2(280.0, 20.0, 400.0, 400.0)
+const BASE_ENEMY_CENTER := Vector2(480.0, 150.0)
+const BASE_ENEMY_SIZE := 96.0
+const BATTLE_LAYER := 2
+
+var world_rect: Rect2
+var enemy_rect: Rect2
+var initial_view_size: Vector2
+var initial_zoom: Vector2
+var walls: Array[StaticBody2D] = []
+var enemy_body: StaticBody2D
+var enemy_art: Sprite2D
+var active := false
+
+func _ready() -> void:
+	visible = false
+	for side in 4:
+		var wall := StaticBody2D.new()
+		wall.collision_layer = 0
+		wall.collision_mask = 0
+		var collision := CollisionShape2D.new()
+		collision.shape = RectangleShape2D.new()
+		wall.add_child(collision)
+		add_child(wall)
+		walls.append(wall)
+	enemy_body = StaticBody2D.new()
+	enemy_body.collision_layer = 0
+	enemy_body.collision_mask = 0
+	var collision := CollisionShape2D.new()
+	collision.shape = RectangleShape2D.new()
+	enemy_body.add_child(collision)
+	add_child(enemy_body)
+	enemy_art = Sprite2D.new()
+	enemy_body.add_child(enemy_art)
+
+func begin(foe: EnemyData, camera: Camera2D, view_size: Vector2) -> void:
+	initial_view_size = view_size
+	initial_zoom = camera.zoom
+	var scale_factor := minf(view_size.x / 960.0, view_size.y / 640.0)
+	var screen_rect := Rect2(Vector2((view_size.x - BASE_RECT.size.x * scale_factor) * 0.5, BASE_RECT.position.y * scale_factor), BASE_RECT.size * scale_factor)
+	var screen_enemy := Rect2(Vector2(view_size.x * 0.5, BASE_ENEMY_CENTER.y * scale_factor) - Vector2.ONE * BASE_ENEMY_SIZE * scale_factor * 0.5, Vector2.ONE * BASE_ENEMY_SIZE * scale_factor)
+	var inverse := get_global_transform_with_canvas().affine_inverse()
+	world_rect = Rect2(inverse * screen_rect.position, inverse * screen_rect.end - inverse * screen_rect.position)
+	enemy_rect = Rect2(inverse * screen_enemy.position, inverse * screen_enemy.end - inverse * screen_enemy.position)
+	# Place thin walls just outside the visible square, so the player's foot circle
+	# can touch the line without crossing it.
+	var t := maxf(1.0, world_rect.size.x / 200.0)
+	_set_wall(0, Vector2(world_rect.position.x - t * 0.5, world_rect.get_center().y), Vector2(t, world_rect.size.y + 2.0 * t))
+	_set_wall(1, Vector2(world_rect.end.x + t * 0.5, world_rect.get_center().y), Vector2(t, world_rect.size.y + 2.0 * t))
+	_set_wall(2, Vector2(world_rect.get_center().x, world_rect.position.y - t * 0.5), Vector2(world_rect.size.x + 2.0 * t, t))
+	_set_wall(3, Vector2(world_rect.get_center().x, world_rect.end.y + t * 0.5), Vector2(world_rect.size.x + 2.0 * t, t))
+	enemy_body.position = enemy_rect.get_center()
+	(enemy_body.get_child(0) as CollisionShape2D).shape.size = enemy_rect.size
+	enemy_art.texture = foe.texture
+	var texture_size := enemy_art.texture.get_size()
+	enemy_art.scale = Vector2.ONE * minf(enemy_rect.size.x / texture_size.x, enemy_rect.size.y / texture_size.y)
+	enemy_art.modulate = Color.WHITE
+	active = true
+	visible = true
+	for wall in walls:
+		wall.collision_layer = BATTLE_LAYER
+	set_enemy_active(true)
+
+func _set_wall(index: int, center: Vector2, shape_size: Vector2) -> void:
+	walls[index].position = center
+	(walls[index].get_child(0) as CollisionShape2D).shape.size = shape_size
+
+func set_enemy_active(enabled: bool) -> void:
+	enemy_art.visible = enabled and active
+	enemy_body.collision_layer = BATTLE_LAYER if enabled and active else 0
+
+func end() -> void:
+	active = false
+	visible = false
+	for wall in walls:
+		wall.collision_layer = 0
+	set_enemy_active(false)
+
+func screen_rect() -> Rect2:
+	var transform := get_global_transform_with_canvas()
+	return Rect2(transform * world_rect.position, transform * world_rect.end - transform * world_rect.position)
+
+func fit_resized_view(camera: Camera2D, view_size: Vector2) -> void:
+	if not active:
+		return
+	var old_scale := minf(initial_view_size.x / 960.0, initial_view_size.y / 640.0)
+	var new_scale := minf(view_size.x / 960.0, view_size.y / 640.0)
+	camera.zoom = initial_zoom * (new_scale / old_scale)
+	camera.force_update_scroll()
+	var desired_center := Vector2(view_size.x * 0.5, (BASE_RECT.position.y + BASE_RECT.size.y * 0.5) * new_scale)
+	var actual_center := get_global_transform_with_canvas() * world_rect.get_center()
+	camera.global_position += get_canvas_transform().affine_inverse().basis_xform(actual_center - desired_center)
+	camera.force_update_scroll()

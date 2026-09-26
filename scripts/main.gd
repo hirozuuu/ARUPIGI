@@ -28,6 +28,7 @@ func _ready() -> void:
 	get_window().min_size = Vector2i(720, 480)
 	exploration = Exploration.new()
 	add_child(exploration)
+	get_viewport().size_changed.connect(_on_viewport_resized)
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	ui = GameUI.new()
@@ -139,7 +140,10 @@ func _physics_process(delta: float) -> void:
 			if notice_remaining == 0.0:
 				ui.notice = ""
 		State.BATTLE:
+			exploration.battle_step(delta, CONFIG)
+			session.position = exploration.player.position
 			ui.flash = maxf(0.0, ui.flash - delta)
+			exploration.arena.enemy_art.modulate = Color(1.0, 0.6, 0.5) if ui.flash > 0.0 else Color.WHITE
 			if ui.battle_phase == "busy":
 				message_remaining -= delta
 				if message_remaining <= 0:
@@ -149,13 +153,14 @@ func _physics_process(delta: float) -> void:
 						message_remaining = CONFIG.message_seconds
 					else:
 						ui.battle_phase = "command" if battle.outcome == BattleModel.Outcome.ONGOING else "result"
+						if ui.battle_phase == "result" and battle.outcome == BattleModel.Outcome.VICTORY:
+							exploration.arena.set_enemy_active(false)
 						confirm_armed = false
 	_refresh_ui()
 
 func begin_battle(foe: EnemyData) -> void:
-	session.save_battle_return()
 	battle.setup(foe)
-	exploration.hide()
+	exploration.begin_battle(foe, get_viewport().get_visible_rect().size)
 	_set_state(State.BATTLE)
 	ui.enemy = foe
 	ui.selected = 0
@@ -173,17 +178,21 @@ func _run_action() -> void:
 
 func _finish_battle() -> void:
 	ui.notice = ""
+	session.position = exploration.player.position
+	exploration.end_battle()
 	if battle.outcome == BattleModel.Outcome.DEFEAT:
 		session.heal()
 		ui.notice = "町の花の泉で目が覚めた。HPが全回復した。"
 		notice_remaining = 4.0
 		_begin_transition("town", MAPS.town.spawn_position("recovery", CONFIG.tile_size))
 	else:
-		session.restore_battle_return()
-		exploration.player.position = session.position
-		exploration.show()
 		encounters.reset(CONFIG)
 		_set_state(State.EXPLORATION)
+
+func _on_viewport_resized() -> void:
+	if state == State.BATTLE and exploration != null:
+		exploration.arena.fit_resized_view(exploration.camera, get_viewport().get_visible_rect().size)
+		_refresh_ui()
 
 func _refresh_ui() -> void:
 	ui.screen = {State.EXPLORATION: "exploration", State.MENU: "menu", State.TRANSITION: "exploration", State.BATTLE: "battle"}[state]
@@ -191,4 +200,6 @@ func _refresh_ui() -> void:
 	ui.max_hp = session.max_hp
 	ui.map_name = MAPS[session.map_id].display_name if MAPS.has(session.map_id) else ""
 	ui.enemy_hp = battle.enemy_hp
+	if state == State.BATTLE:
+		ui.battle_rect = exploration.arena.screen_rect()
 	ui.queue_redraw()

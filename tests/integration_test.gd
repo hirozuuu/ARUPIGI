@@ -39,6 +39,7 @@ func _run() -> void:
 	await _test_portals()
 	await _test_town_encounters()
 	await _test_healing()
+	await _test_arena()
 	await _test_battles()
 	await _test_restart()
 	config.encounter_chance = original_chance
@@ -303,6 +304,174 @@ func _wait_messages() -> void:
 	_check(false, "Timed out waiting for battle messages")
 
 
+func _test_arena() -> void:
+	await _place("world", MAPS.world.spawn_position("start", config.tile_size))
+	var player: Player = game.exploration.player
+	var camera: Camera2D = game.exploration.camera
+	var before_world := player.global_position
+	var before_screen := player.get_global_transform_with_canvas().origin
+	var before_size := player.get_global_transform_with_canvas().basis_xform(Vector2.RIGHT).length()
+	var map_screen: Vector2 = game.exploration.map.get_global_transform_with_canvas().origin
+	game.begin_battle(MAPS.world.enemies[0])
+	game._refresh_ui()
+	var arena: BattleArena = game.exploration.arena
+	_check(game.exploration.visible and arena.active and player.global_position == before_world, "Battle retains the visible field and exact player world position")
+	_check(player.get_global_transform_with_canvas().origin.distance_to(before_screen) < 0.1 and absf(player.get_global_transform_with_canvas().basis_xform(Vector2.RIGHT).length() - before_size) < 0.01, "Battle start retains player screen position and size")
+	_check(game.exploration.map.get_global_transform_with_canvas().origin.distance_to(map_screen) < 0.1, "Battle start does not jump the background")
+	_check(absf(arena.screen_rect().size.x - arena.screen_rect().size.y) < 0.1 and absf(arena.screen_rect().size.x - 400.0) < 0.1, "Battle frame is a 400 pixel square at the reference size")
+	_check(player.collision_mask == BattleArena.BATTLE_LAYER and arena.enemy_body.collision_layer == BattleArena.BATTLE_LAYER, "Battle uses only arena and enemy collisions")
+	_check((arena.enemy_body.get_child(0) as CollisionShape2D).shape.size.distance_to(arena.enemy_rect.size) < 0.01, "Enemy collision square matches its configured visible size")
+	game.encounters.safe_remaining = 123.0
+	game.encounters.distance_remainder = 17.0
+	var fixed_camera := camera.global_position
+	var fixed_map_screen: Vector2 = game.exploration.map.get_global_transform_with_canvas().origin
+	_key(KEY_D, true)
+	await _frames(10)
+	_key(KEY_D, false)
+	_check(player.position.x > before_world.x + 20.0 and game.session.position == player.position, "Battle moves continuously and records the current position")
+	_check(camera.global_position.distance_to(fixed_camera) < 0.01 and game.exploration.map.get_global_transform_with_canvas().origin.distance_to(fixed_map_screen) < 0.1, "Battle camera and background stay fixed while player moves")
+	var selection: int = game.ui.selected
+	var up_start := player.position
+	_key(KEY_W, true)
+	await _frames(8)
+	_key(KEY_W, true, true)
+	await _frames(3)
+	_key(KEY_W, false)
+	_check(game.ui.selected == 1 - selection and player.position.y < up_start.y - 20.0, "One up press changes command once while held movement continues")
+	_key(KEY_A, true)
+	await _frames(5)
+	_key(KEY_A, false)
+	_check(game.ui.selected == 1 - selection, "Horizontal movement does not change the command")
+	game.ui.battle_phase = "busy"
+	var busy_messages: Array[String] = ["移動中のメッセージ"]
+	game.messages = busy_messages
+	game.message_index = 0
+	game.message_remaining = 1.0
+	var busy_start := player.position
+	_key(KEY_S, true)
+	await _frames(6)
+	_key(KEY_S, false)
+	_check(game.ui.battle_phase == "busy" and player.position.y > busy_start.y + 10.0 and game.ui.selected == 1 - selection, "Busy messages allow movement without command changes")
+	game.ui.battle_phase = "result"
+	game.battle.outcome = BattleModel.Outcome.DEFEAT
+	game.session.hp = 0
+	var result_start := player.position
+	_key(KEY_D, true)
+	await _frames(6)
+	_key(KEY_D, false)
+	_check(player.position.x > result_start.x + 10.0, "Defeat result allows movement even at zero HP")
+	_check(game.encounters.safe_remaining == 123.0 and game.encounters.distance_remainder == 17.0, "Battle movement never consumes encounter distance or safety")
+	var fixed_rect := arena.world_rect
+	var position_before_resize := player.position
+	root.size = Vector2i(720, 480)
+	await _frames(3)
+	_check(player.position == position_before_resize and arena.world_rect == fixed_rect, "Resize leaves player and arena world coordinates unchanged")
+	_check(absf(arena.screen_rect().size.x - arena.screen_rect().size.y) < 0.2 and arena.screen_rect().position.y >= -0.2, "Small viewport keeps the square arena visible")
+	root.size = Vector2i(1200, 700)
+	await _frames(3)
+	_check(absf(arena.screen_rect().size.x - arena.screen_rect().size.y) < 0.2 and player.position == position_before_resize, "Wide viewport keeps arena square without moving player")
+	root.size = Vector2i(960, 640)
+	await _frames(3)
+	game.battle.outcome = BattleModel.Outcome.ESCAPED
+	var final_position := player.position
+	game._finish_battle()
+	_check(game.state == MainScript.State.EXPLORATION and game.session.position == final_position and player.position == final_position, "Escape uses the position at final confirmation")
+	_check(player.collision_mask == 1 and not arena.active and arena.enemy_body.collision_layer == 0 and camera.get_parent() == player, "Battle cleanup restores terrain collisions and following camera")
+	root.size = Vector2i(720, 480)
+	await _frames(2)
+	var small_screen_start := player.get_global_transform_with_canvas().origin
+	var small_size_start := player.get_global_transform_with_canvas().basis_xform(Vector2.RIGHT).length()
+	game.begin_battle(MAPS.world.enemies[0])
+	await _frames(1)
+	_check(player.get_global_transform_with_canvas().origin.distance_to(small_screen_start) < 0.1 and absf(player.get_global_transform_with_canvas().basis_xform(Vector2.RIGHT).length() - small_size_start) < 0.01, "Battle start after resizing retains player screen position and size")
+	_check(absf(arena.screen_rect().size.x - arena.screen_rect().size.y) < 0.2 and arena.world_rect.size.x > 0.0, "Battle started after resizing retains a square frame in logical canvas coordinates")
+	root.size = Vector2i(960, 640)
+	await _frames(2)
+	_check(arena.active and arena.enemy_body.collision_layer == BattleArena.BATTLE_LAYER, "Next battle rebuilds enemy collision")
+	var r := arena.world_rect
+	var tests := [
+		{"position": Vector2(r.position.x + 25, r.get_center().y), "key": KEY_A},
+		{"position": Vector2(r.end.x - 25, r.get_center().y), "key": KEY_D},
+		{"position": Vector2(r.get_center().x + 100, r.position.y + 25), "key": KEY_W},
+		{"position": Vector2(r.get_center().x + 100, r.end.y - 25), "key": KEY_S},
+	]
+	for side in tests:
+		player.position = side.position
+		_key(side.key, true)
+		await _frames(15)
+		_key(side.key, false)
+		_check(player.position.x >= r.position.x + 8.5 and player.position.x <= r.end.x - 8.5 and player.position.y >= r.position.y + 8.5 and player.position.y <= r.end.y - 8.5, "Foot circle stays inside each arena edge")
+	player.position = Vector2(r.get_center().x + 100, r.position.y + 9.1)
+	game.ui.selected = 0
+	_key(KEY_W, true)
+	await _frames(3)
+	_key(KEY_W, false)
+	_check(game.ui.selected == 1 and player.position.y >= r.position.y + 8.5, "Blocked upward input still selects a command")
+	var enemy_tests := [
+		{"position": Vector2(arena.enemy_rect.position.x - 20, arena.enemy_rect.get_center().y), "key": KEY_D},
+		{"position": Vector2(arena.enemy_rect.end.x + 20, arena.enemy_rect.get_center().y), "key": KEY_A},
+		{"position": Vector2(arena.enemy_rect.get_center().x, arena.enemy_rect.position.y - 20), "key": KEY_S},
+		{"position": Vector2(arena.enemy_rect.get_center().x, arena.enemy_rect.end.y + 20), "key": KEY_W},
+	]
+	for side in enemy_tests:
+		player.position = side.position
+		_key(side.key, true)
+		await _frames(15)
+		_key(side.key, false)
+		_check(player.position.x <= arena.enemy_rect.position.x - 8.5 or player.position.x >= arena.enemy_rect.end.x + 8.5 or player.position.y <= arena.enemy_rect.position.y - 8.5 or player.position.y >= arena.enemy_rect.end.y + 8.5, "Foot circle cannot enter enemy square from any side")
+	player.position = Vector2(arena.enemy_rect.position.x - 20, arena.enemy_rect.end.y + 20)
+	var slide_start := player.position
+	_key(KEY_D, true)
+	_key(KEY_W, true)
+	await _frames(15)
+	_key(KEY_D, false)
+	_key(KEY_W, false)
+	var nearest_enemy := Vector2(clampf(player.position.x, arena.enemy_rect.position.x, arena.enemy_rect.end.x), clampf(player.position.y, arena.enemy_rect.position.y, arena.enemy_rect.end.y))
+	_check(player.position.distance_to(slide_start) > 15.0 and player.position.distance_to(nearest_enemy) >= 8.5, "Diagonal contact slides around the enemy corner without penetration")
+	game.ui.battle_phase = "result"
+	game.battle.outcome = BattleModel.Outcome.VICTORY
+	arena.set_enemy_active(false)
+	_check(arena.enemy_body.collision_layer == 0 and not arena.enemy_art.visible, "Victory hides the enemy and removes its collision together")
+	game._finish_battle()
+	await _place("dungeon", MAPS.dungeon.spawn_position("entry", config.tile_size))
+	game.begin_battle(MAPS.dungeon.enemies[0])
+	player.position = _center(Vector2i(0, 8))
+	var wall_position := player.position
+	_key(KEY_D, true)
+	await _frames(8)
+	_key(KEY_D, false)
+	_check(not MAPS.dungeon.is_walkable(Vector2i(0, 8)) and player.position.x > wall_position.x + 10.0, "Battle movement ignores blocked terrain")
+	game.battle.outcome = BattleModel.Outcome.ESCAPED
+	var blocked_finish := player.position
+	game._finish_battle()
+	_check(game.session.position == blocked_finish and player.position == blocked_finish, "Battle finish does not correct a blocked terrain position")
+	game.begin_battle(MAPS.dungeon.enemies[0])
+	player.position = Vector2(-20.0, player.position.y)
+	await _frames(2)
+	game.battle.outcome = BattleModel.Outcome.ESCAPED
+	var outside_finish := player.position
+	game._finish_battle()
+	_check(outside_finish.x < 0.0 and game.session.position == outside_finish, "Battle finish retains a position outside the map")
+	await _place("world", MAPS.world.spawn_position("from_town", config.tile_size))
+	game.begin_battle(MAPS.world.enemies[0])
+	player.position = _center(Vector2i(17, 13))
+	await _frames(2)
+	_check(game.state == MainScript.State.BATTLE and game.session.map_id == "world", "Battle movement over a portal does not change maps")
+	game.battle.outcome = BattleModel.Outcome.ESCAPED
+	game._finish_battle()
+	await _place("town", MAPS.town.spawn_position("recovery", config.tile_size))
+	game.session.heal()
+	game.session.damage(5)
+	game.begin_battle(MAPS.world.enemies[0])
+	player.position = _center(Vector2i(10, 5))
+	await _frames(2)
+	_check(game.session.hp == config.max_hp - 5, "Battle movement over the healing spring does not heal: hp=%d expected=%d" % [game.session.hp, config.max_hp - 5])
+	game.battle.outcome = BattleModel.Outcome.ESCAPED
+	game._finish_battle()
+	game.session.heal()
+	await _place("world", MAPS.world.spawn_position("start", config.tile_size))
+
+
 func _test_battles() -> void:
 	await _place("world", MAPS.world.spawn_position("start", config.tile_size))
 	game.session.damage(5)
@@ -330,8 +499,13 @@ func _test_battles() -> void:
 	await _frames(3)
 	_check(game.ui.battle_phase == "result" and game.state == MainScript.State.BATTLE, "Held Enter does not consume final battle result")
 	_key(KEY_ENTER, false)
+	_key(KEY_D, true)
+	await _frames(8)
+	_key(KEY_D, false)
+	var victory_position: Vector2 = game.session.position
+	_check(victory_position.distance_to(return_position) > 10.0, "Victory result movement changes the final position")
 	await _tap(KEY_ENTER)
-	_check(game.state == MainScript.State.EXPLORATION and game.session.map_id == "world" and game.session.position == return_position and game.session.hp == return_hp, "Victory restores exact battle position and carries HP")
+	_check(game.state == MainScript.State.EXPLORATION and game.session.map_id == "world" and game.session.position == victory_position and game.session.hp == return_hp, "Victory carries the final battle position and HP")
 	_check(game.encounters.safe_remaining == config.tile_size * config.safety_tiles and game.encounters.distance_remainder == 0.0, "Victory resets encounter safety")
 	# Hold Enter across a newly started battle; it must require a release first.
 	_key(KEY_ENTER, true)
@@ -345,15 +519,19 @@ func _test_battles() -> void:
 	var hp_before: int = game.session.hp
 	await _tap(KEY_ENTER)
 	await _wait_messages()
-	_check(game.ui.battle_phase == "command" and game.battle.outcome == BattleModel.Outcome.ONGOING and game.session.hp < hp_before, "Failed escape retaliates and returns to command selection")
+	_check(game.ui.battle_phase == "command" and game.battle.outcome == BattleModel.Outcome.ONGOING and game.session.hp < hp_before, "Failed escape retaliates and returns to command selection: phase=%s outcome=%s hp=%d before=%d" % [game.ui.battle_phase, game.battle.outcome, game.session.hp, hp_before])
 	config.escape_chance = 1.0
 	await _frames(1)
 	await _tap(KEY_ENTER)
 	await _wait_messages()
 	var escape_hp: int = game.session.hp
 	await _frames(1)
+	_key(KEY_D, true)
+	await _frames(8)
+	_key(KEY_D, false)
+	var escape_position: Vector2 = game.session.position
 	await _tap(KEY_ENTER)
-	_check(game.state == MainScript.State.EXPLORATION and game.session.position == return_position and game.session.hp == escape_hp, "Successful escape restores exact position with remaining HP")
+	_check(game.state == MainScript.State.EXPLORATION and game.session.position == escape_position and game.session.hp == escape_hp, "Successful escape carries the final position with remaining HP: state=%s pos=%s expected=%s hp=%d expected=%d" % [game.state, game.session.position, escape_position, game.session.hp, escape_hp])
 	await _place("dungeon", MAPS.dungeon.spawn_position("entry", config.tile_size))
 	game.session.hp = 1
 	config.encounter_chance = 1.0
@@ -374,6 +552,7 @@ func _test_battles() -> void:
 	await _tap(KEY_ENTER)
 	await _wait_state(MainScript.State.EXPLORATION)
 	_check(game.session.map_id == "town" and game.session.position == MAPS.town.spawn_position("recovery", config.tile_size) and game.session.hp == config.max_hp, "Defeat returns to safe town recovery spawn at full HP")
+	_check(not game.exploration.arena.active and game.exploration.player.collision_mask == 1 and game.exploration.camera.get_parent() == game.exploration.player, "Defeat restores terrain collision and following camera")
 
 
 func _test_restart() -> void:

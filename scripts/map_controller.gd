@@ -15,6 +15,8 @@ func load_map(map_data: MapData, size: int) -> void:
 		for x in range(-1, data.width + 1):
 			if not data.is_walkable(Vector2i(x, y)):
 				var body := StaticBody2D.new()
+				body.collision_layer = 1
+				body.collision_mask = 0
 				var collision := CollisionShape2D.new()
 				var shape := RectangleShape2D.new()
 				shape.size = Vector2.ONE * tile_size

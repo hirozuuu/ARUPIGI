@@ -10,13 +10,15 @@
 
 | キー | 操作 |
 | --- | --- |
-| WASD / 矢印 | 探索中の移動、戦闘の上下選択 |
+| WASD / 矢印 | 探索・戦闘中の移動。戦闘のコマンド選択中は上／下の押下で選択も切り替える |
 | Enter / テンキーEnter | 決定、戦闘の最終結果から探索へ戻る |
 | Esc | 探索メニューを開く／閉じる |
 
 開始地点から左上にある屋根の印が町です。町では北に進むと回復の泉、南の矢印を踏むと野原に戻れます。洞窟は開始地点の右上にある岩の印です。野原と洞窟では歩いた距離に応じて敵が出現します。戦闘中のEscは無効です。
 
-勝利・逃走時は同じ探索位置に戻り、HPを引き継ぎます。敗北すると町で全回復します。戦闘中の途中メッセージは自動進行し、最終結果だけEnterで進めます。決定は一度キーを離してから押してください。
+戦闘はフィールドの上に重なり、主人公はコマンド選択中・途中メッセージ中・結果表示中も枠内を歩けます。敵と枠の線には足元の当たり判定で止まりますが、背景の地形は戦闘中の移動を妨げません。上／下は押したときに選択を1回切り替え、押し続けると移動だけを続けます。
+
+勝利・逃走時は結果をEnterで閉じた時点の位置とHPを引き継ぎます。敗北すると町で全回復します。途中メッセージは自動進行し、最終結果だけEnterで進めます。決定は一度キーを離してから押してください。戦闘中に山・壁・マップ外へ移動して終了した場合も座標は補正されず、探索再開後に通常の地形衝突が働きます。
 
 セーブはありません。ゲームを終了して再実行するとHP・位置・遭遇距離が初期化されます。メニューの「ゲームに戻る」またはEscで探索を再開できます。音声、経験値、アイテムなどは今回の範囲外です。
 
@@ -36,7 +38,7 @@ New-Item -ItemType Directory -Force build | Out-Null
 & $godotExe --path . --log-file ./build/render.log --script res://tests/render_smoke.gd
 ```
 
-最後のコマンドは実際のGPU描画を使い、野原・メニュー・町・洞窟・戦闘・攻撃・リサイズの7画面を `build/screenshots/` に保存します。`--headless` は付けません。
+最後のコマンドは実際のGPU描画を使い、野原・洞窟の戦闘前後、戦闘中の移動・攻撃・各結果、720×480と1200×700を含む13画面を `build/screenshots/` に保存します。`--headless` は付けません。撮影スクリプトは押下・保持・リピートの入力イベントも確認します。
 
 ## 将来Windowsビルドを作成する際の手順（現段階では実施しない）
 
@@ -81,8 +83,8 @@ $captureDirectory = Join-Path (Get-Location) 'build/packed-screenshots'
 
 マップの座標は0始まりのセル座標です。`rows` の各文字を `terrains` の定義に対応させ、`width` × `height` に合わせます。出現位置は出入口のセル外に置き、歩ける地形で接続してください。変更後は統合検証を実行してください。
 
-状態遷移は `scripts/main.gd`、探索は `exploration.gd`・`map_controller.gd`・`player.gd`、進行データは `game_session.gd`、遭遇は `encounter_controller.gd`、戦闘解決は `battle_model.gd` に分離しています。マップ・敵固有の値はResourceで定義します。
+状態遷移は `scripts/main.gd`、探索は `exploration.gd`・`map_controller.gd`・`player.gd`、戦闘枠と敵の表示・衝突は `battle_arena.gd`、進行データは `game_session.gd`、遭遇は `encounter_controller.gd`、戦闘解決は `battle_model.gd` に分離しています。マップ・敵固有の値はResourceで定義します。
 
-Noto Sans JPの再配布ライセンスは `assets/fonts/OFL.txt`、独自SVGの説明は `assets/art/README.md` にあります。詳細は [実装計画](docs/implementation-plan.md) と [検証記録](docs/verification.md) を参照してください。
+Noto Sans JPの再配布ライセンスは `assets/fonts/OFL.txt`、独自SVGの説明は `assets/art/README.md` にあります。詳細は [初期実装計画](docs/implementation-plan.md)、[戦闘表示の実装計画](docs/battle-overlay-implementation-plan.md)、[検証記録](docs/verification.md) を参照してください。
 
 Godot上部の **マップ** から既存マップの地形を配置・消去できます。Undo／Redo、保存、素材追加、検証、未保存データの復旧に対応しています。[操作ガイド](docs/map-editor-guide.md)、[検証記録](docs/map-editor-verification.md)、[実装計画](docs/map-editor-implementation-plan.md) を参照してください。

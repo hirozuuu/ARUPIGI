@@ -45,19 +45,16 @@ func _test_session() -> void:
 	_check(session.hp == config.max_hp - 7, "Negative damage does not heal")
 	session.map_id = "dungeon"
 	session.position = Vector2(90.125, 251.5)
-	session.save_battle_return()
-	session.map_id = "town"
-	session.position = Vector2.ZERO
-	session.restore_battle_return()
-	_check(session.map_id == "dungeon" and session.position == Vector2(90.125, 251.5), "Battle return preserves map and subpixel position")
-	_check(session.hp == config.max_hp - 7, "Battle return preserves HP")
+	session.position = Vector2(111.625, 274.0)
+	_check(session.map_id == "dungeon" and session.position == Vector2(111.625, 274.0), "Battle movement keeps the current map and exact position")
+	_check(session.hp == config.max_hp - 7, "Battle movement preserves HP")
 	session.damage(1000)
 	_check(session.hp == 0, "Lethal damage clamps HP at zero")
 	session.heal()
 	session.heal()
 	_check(session.hp == session.max_hp, "Healing cannot exceed maximum HP")
 	session.reset(config, Vector2(24, 24))
-	_check(session.map_id == "world" and session.battle_map_id == "world" and session.battle_position == Vector2(24, 24), "Restart clears saved return information")
+	_check(session.map_id == "world" and session.position == Vector2(24, 24), "Restart resets the current map and position")
 
 
 func _test_encounters() -> void:
