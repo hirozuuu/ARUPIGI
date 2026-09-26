@@ -13,7 +13,6 @@ var map_name: String = ""
 var selected: int = 0
 var notice: String = ""
 var enemy: EnemyData
-var enemy_hp: int = 0
 var battle_text: String = ""
 var battle_phase: String = "command"
 var flash: float = 0.0
@@ -52,10 +51,10 @@ func option(value: String, x: float, y: float, index: int) -> void:
 	text_at(value, Vector2(x + 25, y), 24, GOLD if selected == index else PAPER)
 
 func _draw() -> void:
+	draw_set_transform(Vector2.ZERO, 0, size / Vector2(960, 640))
 	if screen == "battle":
 		_draw_battle()
 	else:
-		draw_set_transform(Vector2.ZERO, 0, size / Vector2(960, 640))
 		panel(Rect2(22, 20, 240, 87))
 		text_at(map_name, Vector2(40, 53), 22)
 		text_at("旅人  HP  %02d / %02d" % [hp, max_hp], Vector2(40, 84), 20, GOLD)
@@ -87,15 +86,12 @@ func _draw_battle() -> void:
 	draw_rect(Rect2(0, r.end.y, size.x, maxf(0.0, size.y - r.end.y)), shade)
 	draw_rect(Rect2(0, r.position.y, maxf(0.0, r.position.x), r.size.y), shade)
 	draw_rect(Rect2(r.end.x, r.position.y, maxf(0.0, size.x - r.end.x), r.size.y), shade)
-	var scale_factor := minf(size.x / 960.0, size.y / 640.0)
-	draw_rect(r, PAPER, false, maxf(2.0, 3.0 * scale_factor))
-	var origin := Vector2((size.x - 960.0 * scale_factor) * 0.5, 0.0)
-	draw_set_transform(origin, 0.0, Vector2.ONE * scale_factor)
+	draw_rect(r, PAPER, false, 3.0)
 	panel(Rect2(28, 24, 240, 75))
 	text_at("旅人  HP  %02d / %02d" % [hp, max_hp], Vector2(45, 71), 22, GOLD)
 	if enemy != null:
-		draw_rect(Rect2(382, 43, 196, 43), Color(0.035, 0.06, 0.07, 0.72))
-		centered(enemy.display_name, 79, 25)
+		panel(Rect2(704, 24, 228, 75))
+		text_at(enemy.display_name, Vector2(724, 71), 25)
 	panel(Rect2(28, 440, 272, 172))
 	option("こうげき", 55, 492, 0)
 	option("にげる", 55, 538, 1)

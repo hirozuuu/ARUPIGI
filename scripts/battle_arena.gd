@@ -9,8 +9,6 @@ const BATTLE_LAYER := 2
 
 var world_rect: Rect2
 var enemy_rect: Rect2
-var initial_view_size: Vector2
-var initial_zoom: Vector2
 var walls: Array[StaticBody2D] = []
 var enemy_body: StaticBody2D
 var enemy_art: Sprite2D
@@ -37,14 +35,12 @@ func _ready() -> void:
 	enemy_art = Sprite2D.new()
 	enemy_body.add_child(enemy_art)
 
-func begin(foe: EnemyData, camera: Camera2D, view_size: Vector2) -> void:
-	initial_view_size = view_size
-	initial_zoom = camera.zoom
-	var scale_factor := minf(view_size.x / 960.0, view_size.y / 640.0)
-	var screen_rect := Rect2(Vector2((view_size.x - BASE_RECT.size.x * scale_factor) * 0.5, BASE_RECT.position.y * scale_factor), BASE_RECT.size * scale_factor)
-	var screen_enemy := Rect2(Vector2(view_size.x * 0.5, BASE_ENEMY_CENTER.y * scale_factor) - Vector2.ONE * BASE_ENEMY_SIZE * scale_factor * 0.5, Vector2.ONE * BASE_ENEMY_SIZE * scale_factor)
+func begin(foe: EnemyData) -> void:
+	# canvas_items + keep が960×640の論理画面全体を等方的に拡縮する。
+	# ウィンドウのリサイズではワールド座標やカメラ倍率を変更しない。
+	var screen_enemy := Rect2(BASE_ENEMY_CENTER - Vector2.ONE * BASE_ENEMY_SIZE * 0.5, Vector2.ONE * BASE_ENEMY_SIZE)
 	var inverse := get_global_transform_with_canvas().affine_inverse()
-	world_rect = Rect2(inverse * screen_rect.position, inverse * screen_rect.end - inverse * screen_rect.position)
+	world_rect = Rect2(inverse * BASE_RECT.position, inverse * BASE_RECT.end - inverse * BASE_RECT.position)
 	enemy_rect = Rect2(inverse * screen_enemy.position, inverse * screen_enemy.end - inverse * screen_enemy.position)
 	# Place thin walls just outside the visible square, so the player's foot circle
 	# can touch the line without crossing it.
@@ -83,15 +79,3 @@ func end() -> void:
 func screen_rect() -> Rect2:
 	var transform := get_global_transform_with_canvas()
 	return Rect2(transform * world_rect.position, transform * world_rect.end - transform * world_rect.position)
-
-func fit_resized_view(camera: Camera2D, view_size: Vector2) -> void:
-	if not active:
-		return
-	var old_scale := minf(initial_view_size.x / 960.0, initial_view_size.y / 640.0)
-	var new_scale := minf(view_size.x / 960.0, view_size.y / 640.0)
-	camera.zoom = initial_zoom * (new_scale / old_scale)
-	camera.force_update_scroll()
-	var desired_center := Vector2(view_size.x * 0.5, (BASE_RECT.position.y + BASE_RECT.size.y * 0.5) * new_scale)
-	var actual_center := get_global_transform_with_canvas() * world_rect.get_center()
-	camera.global_position += get_canvas_transform().affine_inverse().basis_xform(actual_center - desired_center)
-	camera.force_update_scroll()

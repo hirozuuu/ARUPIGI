@@ -19,6 +19,10 @@ func _run() -> void:
 	game.begin_battle(game.MAPS.world.enemies[0])
 	await _capture("world_battle")
 	var start: Vector2 = game.exploration.player.position
+	var arena: BattleArena = game.exploration.arena
+	game.exploration.player.position = Vector2(arena.world_rect.get_center().x, arena.world_rect.position.y + 65.0)
+	await _capture("battle_above_enemy")
+	game.exploration.player.position = start
 	_key(KEY_W, true)
 	await _frames(12)
 	_key(KEY_W, true, true)
@@ -52,7 +56,6 @@ func _run() -> void:
 	game._refresh_ui()
 	await _capture("defeat_result")
 	game._finish_battle()
-	game._begin_transition("town", game.MAPS.town.spawn_position("recovery", game.CONFIG.tile_size))
 	await create_timer(0.6).timeout
 	await _capture("town")
 	game._begin_transition("dungeon", game.MAPS.dungeon.spawn_position("entry", game.CONFIG.tile_size))
@@ -64,9 +67,11 @@ func _run() -> void:
 	await _capture("small_battle")
 	root.size = Vector2i(1200, 700)
 	await _capture("wide_battle")
+	root.size = Vector2i(720, 900)
+	await _capture("tall_battle")
 	game.queue_free()
 	await process_frame
-	print("PASS: 13 Compatibility renderer screenshots and held-key battle input saved under %s." % output_dir)
+	print("PASS: 15 Compatibility renderer screenshots and held-key battle input saved under %s." % output_dir)
 	quit()
 
 func _key(code: Key, pressed: bool, echo: bool = false) -> void:

@@ -362,16 +362,13 @@ func _test_arena() -> void:
 	_check(player.position.x > result_start.x + 10.0, "Defeat result allows movement even at zero HP")
 	_check(game.encounters.safe_remaining == 123.0 and game.encounters.distance_remainder == 17.0, "Battle movement never consumes encounter distance or safety")
 	var fixed_rect := arena.world_rect
+	var fixed_enemy_rect := arena.enemy_rect
 	var position_before_resize := player.position
-	root.size = Vector2i(720, 480)
-	await _frames(3)
-	_check(player.position == position_before_resize and arena.world_rect == fixed_rect, "Resize leaves player and arena world coordinates unchanged")
-	_check(absf(arena.screen_rect().size.x - arena.screen_rect().size.y) < 0.2 and arena.screen_rect().position.y >= -0.2, "Small viewport keeps the square arena visible")
-	root.size = Vector2i(1200, 700)
-	await _frames(3)
-	_check(absf(arena.screen_rect().size.x - arena.screen_rect().size.y) < 0.2 and player.position == position_before_resize, "Wide viewport keeps arena square without moving player")
-	root.size = Vector2i(960, 640)
-	await _frames(3)
+	for dimensions in [Vector2i(720, 480), Vector2i(1200, 700), Vector2i(720, 900), Vector2i(960, 640)]:
+		root.size = dimensions
+		await _frames(3)
+		_check(player.position == position_before_resize and arena.world_rect == fixed_rect and arena.enemy_rect == fixed_enemy_rect and camera.global_position == fixed_camera, "Resize preserves player, arena, enemy and camera world coordinates")
+		_check_arena_display()
 	game.battle.outcome = BattleModel.Outcome.ESCAPED
 	var final_position := player.position
 	game._finish_battle()
@@ -385,6 +382,7 @@ func _test_arena() -> void:
 	await _frames(1)
 	_check(player.get_global_transform_with_canvas().origin.distance_to(small_screen_start) < 0.1 and absf(player.get_global_transform_with_canvas().basis_xform(Vector2.RIGHT).length() - small_size_start) < 0.01, "Battle start after resizing retains player screen position and size")
 	_check(absf(arena.screen_rect().size.x - arena.screen_rect().size.y) < 0.2 and arena.world_rect.size.x > 0.0, "Battle started after resizing retains a square frame in logical canvas coordinates")
+	_check_arena_display()
 	root.size = Vector2i(960, 640)
 	await _frames(2)
 	_check(arena.active and arena.enemy_body.collision_layer == BattleArena.BATTLE_LAYER, "Next battle rebuilds enemy collision")
@@ -430,8 +428,6 @@ func _test_arena() -> void:
 	_check(player.position.distance_to(slide_start) > 15.0 and player.position.distance_to(nearest_enemy) >= 8.5, "Diagonal contact slides around the enemy corner without penetration")
 	game.ui.battle_phase = "result"
 	game.battle.outcome = BattleModel.Outcome.VICTORY
-	arena.set_enemy_active(false)
-	_check(arena.enemy_body.collision_layer == 0 and not arena.enemy_art.visible, "Victory hides the enemy and removes its collision together")
 	game._finish_battle()
 	await _place("dungeon", MAPS.dungeon.spawn_position("entry", config.tile_size))
 	game.begin_battle(MAPS.dungeon.enemies[0])
@@ -472,6 +468,21 @@ func _test_arena() -> void:
 	await _place("world", MAPS.world.spawn_position("start", config.tile_size))
 
 
+func _check_arena_display() -> void:
+	var arena: BattleArena = game.exploration.arena
+	var stretch := root.get_stretch_transform()
+	var expected_scale := minf(root.size.x / 960.0, root.size.y / 640.0)
+	var frame_size := stretch.basis_xform(arena.screen_rect().size)
+	_check(frame_size.distance_to(Vector2.ONE * 400.0 * expected_scale) < 0.2, "Arena is square at the expected size after window stretching")
+	var world_to_pixels := stretch * arena.get_global_transform_with_canvas()
+	var enemy_size := world_to_pixels.basis_xform(arena.enemy_rect.size)
+	_check(enemy_size.distance_to(Vector2.ONE * 96.0 * expected_scale) < 0.2, "Enemy collision remains square after window stretching")
+	var texture_size := arena.enemy_art.texture.get_size()
+	var art_to_pixels := stretch * arena.enemy_art.get_global_transform_with_canvas()
+	_check(art_to_pixels.basis_xform(texture_size).distance_to(enemy_size) < 0.2, "Current square enemy art matches its collision in rendered pixels")
+	_check(root.get_visible_rect().size == Vector2(960, 640), "Window resizing preserves the logical 960 by 640 viewport")
+
+
 func _test_battles() -> void:
 	await _place("world", MAPS.world.spawn_position("start", config.tile_size))
 	game.session.damage(5)
@@ -492,12 +503,14 @@ func _test_battles() -> void:
 	_key(KEY_ENTER, true)
 	await _frames(1)
 	_check(game.ui.battle_phase == "busy" and game.battle.outcome == BattleModel.Outcome.VICTORY, "Attack begins message sequencing and resolves victory")
+	_check(game.exploration.arena.enemy_art.visible and game.exploration.arena.enemy_body.collision_layer == BattleArena.BATTLE_LAYER, "Lethal attack keeps enemy art and collision during messages")
 	_key(KEY_ENTER, true, true)
 	await _frames(1)
 	_check(game.session.hp == return_hp and game.state == MainScript.State.BATTLE, "Repeat Enter during action cannot duplicate action or skip battle")
 	await _wait_messages()
 	await _frames(3)
 	_check(game.ui.battle_phase == "result" and game.state == MainScript.State.BATTLE, "Held Enter does not consume final battle result")
+	_check(not game.exploration.arena.enemy_art.visible and game.exploration.arena.enemy_body.collision_layer == 0, "Victory message completion hides the enemy and removes collision")
 	_key(KEY_ENTER, false)
 	_key(KEY_D, true)
 	await _frames(8)

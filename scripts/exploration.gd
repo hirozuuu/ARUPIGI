@@ -31,16 +31,12 @@ func step(delta: float, config: GameConfig) -> float:
 	var direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	return player.move_player(direction, config.move_speed, delta)
 
-func begin_battle(foe: EnemyData, view_size: Vector2) -> void:
+func begin_battle(foe: EnemyData) -> void:
 	camera.reparent(self, true)
 	camera.force_update_scroll()
-	arena.begin(foe, camera, view_size)
+	arena.begin(foe)
 	saved_collision_mask = player.collision_mask
 	player.collision_mask = BattleArena.BATTLE_LAYER
-
-func battle_step(delta: float, config: GameConfig) -> void:
-	var direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	player.move_player(direction, config.move_speed, delta)
 
 func end_battle() -> void:
 	arena.end()
@@ -48,7 +44,6 @@ func end_battle() -> void:
 	player.velocity = Vector2.ZERO
 	camera.reparent(player, false)
 	camera.position = Vector2.ZERO
-	camera.zoom = arena.initial_zoom
 	camera.force_update_scroll()
 
 func newly_healing() -> bool:
