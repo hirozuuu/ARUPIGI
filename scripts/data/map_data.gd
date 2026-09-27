@@ -14,6 +14,7 @@ extends Resource
 @export var healing_cells: Array[Vector2i] = []
 @export var encounters_enabled: bool = false
 @export var enemies: Array[EnemyData] = []
+@export var npcs: Array[NpcData] = []
 
 
 func cell_at(position: Vector2, tile_size: int) -> Vector2i:

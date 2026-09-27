@@ -5,6 +5,7 @@ signal map_saved(path: String)
 const Document = preload("res://addons/map_editor/map_edit_document.gd")
 const Canvas = preload("res://addons/map_editor/map_canvas.gd")
 const Validator = preload("res://scripts/data/map_validator.gd")
+const NpcPanel = preload("res://addons/map_editor/npc_editor_panel.gd")
 var recovery_map_path: String = "user://map_editor_recovery.tres"
 var recovery_info_path: String = "user://map_editor_recovery.cfg"
 var terrain_directory: String = "res://data/terrains"
@@ -13,6 +14,14 @@ var document := Document.new()
 var canvas: Canvas
 var maps := OptionButton.new()
 var palette := ItemList.new()
+var npc_list := ItemList.new()
+var npc_scroll := ScrollContainer.new()
+var edit_kind := OptionButton.new()
+var npc_side: VBoxContainer
+var npc_detail: VBoxContainer
+var selected_npc_id: String = ""
+var pending_npc: NpcData
+var moving_npc_id: String = ""
 var base := OptionButton.new()
 var status := Label.new()
 var messages := RichTextLabel.new()
@@ -47,12 +56,23 @@ func _ready() -> void:
 	save_button = _button(top, "保存 (Ctrl+S)", save_current)
 	_button(top, "再読み込み", func(): request_open(document.path))
 	var mode := OptionButton.new()
+	edit_kind.add_item("地形")
+	edit_kind.add_item("NPC")
+	edit_kind.item_selected.connect(func(index: int):
+		flush_text()
+		canvas.finish_stroke()
+		canvas.npc_mode = index == 1
+		palette.visible = index == 0
+		npc_side.visible = index == 1
+		_update_status()
+	)
+	top.add_child(edit_kind)
 	mode.add_item("配置")
 	mode.add_item("消去")
 	mode.item_selected.connect(func(index: int): canvas.finish_stroke(); canvas.erase_mode = index == 1)
 	top.add_child(mode)
-	undo_button = _button(top, "元に戻す", document.undo)
-	redo_button = _button(top, "やり直す", document.redo)
+	undo_button = _button(top, "元に戻す", undo_current)
+	redo_button = _button(top, "やり直す", redo_current)
 	var options := HFlowContainer.new()
 	add_child(options)
 	var label := Label.new()
@@ -79,7 +99,7 @@ func _ready() -> void:
 	_button(options, "素材一覧を更新", refresh_palette)
 	_button(options, "検証", _validate)
 	var help := Label.new()
-	help.text = "左: 配置 / 右: 下地に戻す / 中ドラッグ・スクロールバー: 移動 / S: 出現位置"
+	help.text = "地形: 左で配置・右で下地 / NPC: 左で選択・配置、右で削除 / 中ドラッグ・スクロールバー: 移動"
 	help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(help)
 	var split := HSplitContainer.new()
@@ -90,14 +110,38 @@ func _ready() -> void:
 	palette.icon_mode = ItemList.ICON_MODE_LEFT
 	palette.item_selected.connect(func(index: int): canvas.finish_stroke(); canvas.brush = _terrains[index]; _update_status())
 	split.add_child(palette)
+	var content := HSplitContainer.new()
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	split.add_child(content)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	split.add_child(scroll)
+	content.add_child(scroll)
 	canvas = Canvas.new()
 	canvas.tile_size = (load("res://data/config.tres") as GameConfig).tile_size
 	scroll.add_child(canvas)
 	canvas.cell_hovered.connect(func(cell: Vector2i): _hover = cell; _update_status())
 	canvas.operation_failed.connect(_show_notice)
+	canvas.npc_cell_clicked.connect(_npc_cell)
+	npc_scroll.custom_minimum_size.x = 400
+	content.add_child(npc_scroll)
+	npc_side = VBoxContainer.new()
+	npc_side.custom_minimum_size.x = 380
+	npc_scroll.add_child(npc_side)
+	npc_side.add_child(_npc_label("NPC一覧"))
+	npc_list.custom_minimum_size.y = 105
+	npc_side.add_child(npc_list)
+	npc_list.item_selected.connect(func(index: int): _select_npc(npc_list.get_item_metadata(index)))
+	var npc_actions := HFlowContainer.new()
+	npc_side.add_child(npc_actions)
+	_button(npc_actions, "NPC追加", _new_npc)
+	_button(npc_actions, "移動", _move_npc)
+	_button(npc_actions, "複製", _duplicate_npc)
+	_button(npc_actions, "削除", _delete_npc)
+	_button(npc_actions, "ID修復", _repair_npc_ids)
+	npc_detail = NpcPanel.new()
+	npc_side.add_child(npc_detail)
+	npc_detail.operation_failed.connect(_show_notice)
+	npc_side.visible = false
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(status)
 	messages.custom_minimum_size.y = 90
@@ -105,6 +149,7 @@ func _ready() -> void:
 	add_child(messages)
 	_setup_dialogs()
 	document.changed.connect(_update_status)
+	document.changed.connect(_refresh_npc_listing)
 	document.committed.connect(_on_committed)
 	_open_now(MAP_PATHS[0])
 	_recovery_pending = FileAccess.file_exists(recovery_info_path)
@@ -120,6 +165,172 @@ func _button(parent: Node, title: String, action: Callable) -> Button:
 	button.pressed.connect(action)
 	parent.add_child(button)
 	return button
+
+func _npc_label(value: String) -> Label:
+	var result := Label.new()
+	result.text = value
+	return result
+
+func flush_text() -> void:
+	if is_instance_valid(npc_detail):
+		npc_detail.flush_text()
+
+func undo_current() -> void:
+	flush_text()
+	document.undo()
+
+func redo_current() -> void:
+	flush_text()
+	document.redo()
+
+func _selected_npc() -> NpcData:
+	if document.data == null:
+		return null
+	for npc in document.data.npcs:
+		if npc != null and npc.id == selected_npc_id:
+			return npc
+	return null
+
+func _refresh_npc_listing() -> void:
+	if not is_instance_valid(npc_list) or document.data == null:
+		return
+	npc_list.clear()
+	for index in document.data.npcs.size():
+		var npc := document.data.npcs[index]
+		if npc == null:
+			npc_list.add_item("(欠落したNPC Resource) [%d]" % index)
+			npc_list.set_item_metadata(npc_list.item_count - 1, "__missing__%d" % index)
+			continue
+		npc_list.add_item("%s  %s  %s" % [npc.display_name, npc.id, str(npc.cell)])
+		npc_list.set_item_metadata(npc_list.item_count - 1, npc.id)
+		if npc.id == selected_npc_id:
+			npc_list.select(npc_list.item_count - 1)
+	canvas.selected_npc_id = selected_npc_id
+	canvas.queue_redraw()
+	if is_instance_valid(npc_detail):
+		npc_detail.refresh()
+
+func _select_npc(id: String) -> void:
+	flush_text()
+	selected_npc_id = id
+	pending_npc = null
+	moving_npc_id = ""
+	npc_detail.set_target(document, id)
+	_refresh_npc_listing()
+
+func _new_npc() -> void:
+	if _recovery_pending:
+		return
+	flush_text()
+	var npc := NpcData.new()
+	npc.id = document.new_id("npc")
+	npc.display_name = "住人"
+	npc.texture = load("res://assets/art/npc.svg")
+	npc.dialogue = DialogueData.new()
+	var node := DialogueNodeData.new()
+	node.id = "node_1"
+	node.text = "こんにちは。"
+	npc.dialogue.start_node_id = node.id
+	npc.dialogue.nodes.append(node)
+	pending_npc = npc
+	moving_npc_id = ""
+	_show_notice("配置先のセルを左クリックしてください。")
+
+func _move_npc() -> void:
+	if _recovery_pending:
+		return
+	flush_text()
+	if _selected_npc() == null:
+		return
+	moving_npc_id = selected_npc_id
+	pending_npc = null
+	_show_notice("移動先のセルを左クリックしてください。")
+
+func _duplicate_npc() -> void:
+	if _recovery_pending:
+		return
+	flush_text()
+	var npc := _selected_npc()
+	if npc == null:
+		return
+	var source: Array[NpcData] = [npc]
+	pending_npc = Document.copy_npcs(source)[0]
+	pending_npc.id = document.new_id("npc")
+	moving_npc_id = ""
+	_show_notice("複製先のセルを左クリックしてください。")
+
+func _delete_npc() -> void:
+	if _recovery_pending:
+		return
+	flush_text()
+	if selected_npc_id.begins_with("__missing__"):
+		var index := int(selected_npc_id.trim_prefix("__missing__"))
+		if index >= 0 and index < document.data.npcs.size() and document.data.npcs[index] == null:
+			var before := document._snapshot()
+			document.data.npcs.remove_at(index)
+			document.commit_npcs(before, "欠落したNPCを削除")
+			_select_npc("")
+		return
+	var npc := _selected_npc()
+	if npc == null:
+		return
+	var before := document._snapshot()
+	document.data.npcs.erase(npc)
+	document.commit_npcs(before, "NPCを削除")
+	_select_npc("")
+
+func _repair_npc_ids() -> void:
+	if _recovery_pending:
+		return
+	flush_text()
+	var before := document._snapshot()
+	var seen: Dictionary = {}
+	for npc in document.data.npcs:
+		if npc == null:
+			continue
+		if npc.id.strip_edges().is_empty() or seen.has(npc.id):
+			npc.id = document.new_id("npc")
+		seen[npc.id] = true
+	document.commit_npcs(before, "NPCのIDを修復")
+	_select_npc("")
+
+func _npc_cell(cell: Vector2i, erase: bool) -> void:
+	if _recovery_pending:
+		return
+	flush_text()
+	if erase:
+		var existing := document.npc_at(cell)
+		if existing != null:
+			var before := document._snapshot()
+			document.data.npcs.erase(existing)
+			document.commit_npcs(before, "NPCを削除")
+			if selected_npc_id == existing.id:
+				_select_npc("")
+		return
+	if pending_npc != null or not moving_npc_id.is_empty():
+		var issue := document.placement_error(cell, moving_npc_id)
+		if not issue.is_empty():
+			_show_notice("配置できません: " + issue)
+			return
+		var before := document._snapshot()
+		var placed_id: String
+		if pending_npc != null:
+			pending_npc.cell = cell
+			placed_id = pending_npc.id
+			document.data.npcs.append(pending_npc)
+			pending_npc = null
+		else:
+			placed_id = moving_npc_id
+			for npc in document.data.npcs:
+				if npc != null and npc.id == moving_npc_id:
+					npc.cell = cell
+					break
+			moving_npc_id = ""
+		document.commit_npcs(before, "NPCを配置・移動")
+		_select_npc(placed_id)
+		return
+	var target := document.npc_at(cell)
+	_select_npc(target.id if target != null else "")
 
 func _setup_dialogs() -> void:
 	file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
@@ -160,6 +371,7 @@ func _setup_dialogs() -> void:
 	add_child(recovery_dialog)
 
 func request_open(path: String) -> void:
+	flush_text()
 	canvas.finish_stroke()
 	_select_current_map()
 	if _recovery_pending:
@@ -172,10 +384,16 @@ func request_open(path: String) -> void:
 		_open_now(path)
 
 func _open_now(path: String) -> bool:
+	flush_text()
 	if not document.open(path):
 		_show_notice(document.last_error)
 		return false
 	canvas.set_document(document)
+	selected_npc_id = ""
+	pending_npc = null
+	moving_npc_id = ""
+	npc_detail.set_target(document, "")
+	_refresh_npc_listing()
 	canvas.get_parent().scroll_horizontal = 0
 	canvas.get_parent().scroll_vertical = 0
 	_select_current_map()
@@ -288,6 +506,7 @@ func _update_status() -> void:
 	undo_button.disabled = not document.history.has_undo() or _recovery_pending
 	redo_button.disabled = not document.history.has_redo() or _recovery_pending
 	save_button.disabled = _recovery_pending
+	edit_kind.disabled = _recovery_pending
 	var lines: PackedStringArray = []
 	if not _notice.is_empty():
 		lines.append(_notice)
@@ -304,6 +523,7 @@ func save_current() -> bool:
 	if _recovery_pending:
 		return false
 	canvas.finish_stroke()
+	flush_text()
 	if not document.save(registered_maps()):
 		_show_notice(document.last_error)
 		checkpoint()
@@ -323,9 +543,9 @@ func _input(event: InputEvent) -> void:
 		save_current()
 	elif event.keycode == KEY_Z:
 		if event.shift_pressed:
-			document.redo()
+			redo_current()
 		else:
-			document.undo()
+			undo_current()
 	else:
 		return
 	get_viewport().set_input_as_handled()
@@ -371,6 +591,9 @@ func _restore_recovery() -> void:
 	_recovery_pending = false
 	canvas.mouse_filter = Control.MOUSE_FILTER_STOP
 	canvas.set_document(document)
+	selected_npc_id = ""
+	npc_detail.set_target(document, "")
+	_refresh_npc_listing()
 	_select_current_map()
 	refresh_palette()
 	_show_notice("未保存データを復元しました。保存前に内容を確認してください。")

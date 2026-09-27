@@ -42,13 +42,26 @@ func _run() -> void:
 	await _capture("victory_result")
 	game._finish_battle()
 	game.begin_battle(game.MAPS.world.enemies[0])
-	game.battle.outcome = BattleModel.Outcome.ESCAPED
-	game.ui.battle_phase = "result"
-	game.ui.battle_text = "うまく にげきれた！"
+	game.ui.selected = 1
+	game._run_action()
+	game.exploration.player.position.x = arena.world_rect.end.x - 10.0
+	game._refresh_ui()
+	await _capture("escape_open")
+	_key(KEY_D, true)
+	await _frames(16)
+	_key(KEY_D, false)
+	assert(game.battle.outcome == BattleModel.Outcome.ESCAPED and game.ui.battle_phase == "result")
 	game._refresh_ui()
 	await _capture("escape_result")
 	game._finish_battle()
 	game.begin_battle(game.MAPS.world.enemies[0])
+	game.exploration.player.position = arena.world_rect.get_center() + Vector2(0.0, 100.0)
+	game.ui.selected = 1
+	game._run_action()
+	game.escape_remaining = 0.01
+	await _frames(2)
+	assert(game.ui.battle_phase == "command" and game.ui.battle_boundary_visible)
+	await _capture("escape_timeout")
 	game.session.hp = 0
 	game.battle.outcome = BattleModel.Outcome.DEFEAT
 	game.ui.battle_phase = "result"
@@ -58,6 +71,39 @@ func _run() -> void:
 	game._finish_battle()
 	await create_timer(0.6).timeout
 	await _capture("town")
+	game.exploration.player.position = game.MAPS.town.spawn_position("entry", game.CONFIG.tile_size)
+	game.session.position = game.exploration.player.position
+	game.exploration.player.facing = Vector2.LEFT
+	game._begin_dialogue(game.exploration.npcs[0])
+	game._refresh_ui()
+	await _capture("town_dialogue_choices")
+	root.size = Vector2i(720, 480)
+	await _capture("small_dialogue")
+	root.size = Vector2i(1200, 700)
+	await _capture("wide_dialogue")
+	root.size = Vector2i(720, 900)
+	await _capture("tall_dialogue")
+	root.size = Vector2i(960, 640)
+	game.dialogue.select(1)
+	game.dialogue.confirm()
+	game.ui.dialogue_view.queue_redraw()
+	await _capture("town_dialogue_reply")
+	game._set_state(game.State.EXPLORATION)
+	game._refresh_ui()
+	game.exploration.enter(game.MAPS.world, game.MAPS.world.spawn_position("start", game.CONFIG.tile_size), game.CONFIG)
+	game.session.map_id = "world"
+	game.session.position = game.exploration.player.position
+	game._begin_dialogue(game.exploration.npcs[0])
+	game._refresh_ui()
+	await _capture("world_dialogue_first")
+	game.dialogue.confirm()
+	game.ui.dialogue_view.queue_redraw()
+	await _capture("world_dialogue_middle")
+	game.dialogue.confirm()
+	game.ui.dialogue_view.queue_redraw()
+	await _capture("world_dialogue_last")
+	game._set_state(game.State.EXPLORATION)
+	game._refresh_ui()
 	game._begin_transition("dungeon", game.MAPS.dungeon.spawn_position("entry", game.CONFIG.tile_size))
 	await create_timer(0.6).timeout
 	await _capture("dungeon_before")
@@ -71,7 +117,7 @@ func _run() -> void:
 	await _capture("tall_battle")
 	game.queue_free()
 	await process_frame
-	print("PASS: 15 Compatibility renderer screenshots and held-key battle input saved under %s." % output_dir)
+	print("PASS: 25 Compatibility renderer screenshots and held-key battle input saved under %s." % output_dir)
 	quit()
 
 func _key(code: Key, pressed: bool, echo: bool = false) -> void:

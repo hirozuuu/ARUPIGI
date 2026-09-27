@@ -45,16 +45,28 @@ func _run() -> void:
 	check(ResourceSaver.save(Document.copy_map(load(EditorPanel.MAP_PATHS[0])), path) == OK, "Create isolated editor fixture")
 	check(panel._open_now(path), "Open fixture inside real editor")
 	EditorInterface.set_main_screen_editor("マップ")
-	for frame in 5:
+	for frame in 60:
+		if panel.is_visible_in_tree():
+			break
 		await process_frame
 	check(panel.is_visible_in_tree(), "Main screen is visible")
 	panel.document.begin_stroke(load("res://data/terrains/wall.tres"))
 	panel.document.paint_to(Vector2i(0, 0))
 	plugin._apply_changes()
+	panel._select_npc("field_guide")
+	var original_text: String = panel.document.data.npcs[0].dialogue.nodes[0].text
+	panel.npc_detail.name_edit.text = "案内役"
+	panel.npc_detail.name_edit.text_changed.emit("案内役")
+	panel.npc_detail.dialogue_panel.body_edit.text = "復旧する会話本文。"
+	panel.npc_detail.dialogue_panel.body_edit.text_changed.emit()
+	check(panel.document.data.npcs[0].display_name == "案内役" and panel.document.data.npcs[0].dialogue.nodes[0].text == "復旧する会話本文。", "Confirmed NPC and dialogue text reach working data")
 	check(not plugin._get_unsaved_status("").is_empty(), "Editor exit hook reports unsaved map")
+	check(panel.document.history.has_undo() and FileAccess.file_exists(panel.recovery_info_path), "Unsaved-status hook finalizes pending text and checkpoints recovery")
 	check(plugin._get_unsaved_status("res://scenes/main.tscn").is_empty(), "Map does not mark unrelated scene dirty")
 	plugin._save_external_data()
 	check(not panel.document.is_dirty(), "Editor save hook saves map")
+	var saved := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE) as MapData
+	check(saved.npcs[0].display_name == "案内役" and saved.npcs[0].dialogue.nodes[0].text == "復旧する会話本文。", "Save hook writes NPC name and dialogue body")
 	panel.document.undo()
 	check(panel.document.is_dirty(), "Undo remains available after editor save")
 	# Disable/enable through EditorInterface, then restore the on-disk checkpoint.
@@ -70,7 +82,7 @@ func _run() -> void:
 		panel.recovery_map_path = "res://build/map-editor-tests/plugin-recovery.tres"
 		panel.recovery_info_path = "res://build/map-editor-tests/plugin-recovery.cfg"
 		panel._restore_recovery()
-		check(panel.document.is_dirty() and panel.document.data.rows[0][0] == ".", "Reenabled editor restores unsaved content")
+		check(panel.document.is_dirty() and panel.document.data.npcs[0].dialogue.nodes[0].text == original_text, "Reenabled editor restores unsaved NPC dialogue content")
 		panel.document.open(path)
 		panel.clear_recovery()
 	for frame in 5:

@@ -13,6 +13,7 @@ func _enter_tree() -> void:
 func _exit_tree() -> void:
 	if is_instance_valid(panel):
 		panel.canvas.finish_stroke()
+		panel.flush_text()
 		panel.checkpoint()
 		panel.queue_free()
 
@@ -32,8 +33,11 @@ func _make_visible(visible: bool) -> void:
 func _apply_changes() -> void:
 	if is_instance_valid(panel):
 		panel.canvas.finish_stroke()
+		panel.flush_text()
 
 func _get_unsaved_status(for_scene: String) -> String:
+	if is_instance_valid(panel):
+		panel.flush_text()
 	if for_scene.is_empty() and is_instance_valid(panel) and panel.document.is_dirty():
 		return "マップ %s に未保存の変更があります。" % panel.document.path
 	return ""

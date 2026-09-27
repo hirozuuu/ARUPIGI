@@ -2,9 +2,9 @@
 
 作成日：2026-09-27
 
-状態：計画作成済み。機能の実装・実行検証は未着手。
+状態：2026-09-27に実装。検証結果は `docs/verification.md` に記録。
 
-Godot 4.6.x / GDScript / GL Compatibilityを前提とする。第1節はユーザーと合意した仕様、第2節以降は既存実装を調査したうえでの設計方針とする。今回の成果物はこの計画書であり、ゲーム実装は変更しない。
+Godot 4.6.x / GDScript / GL Compatibilityを前提とする。第1節はユーザーと合意した仕様、第2節以降は実装方針と検証条件を記録する。
 
 関連資料：[マップ編集ガイド](map-editor-guide.md)、[マップ編集の実装計画](map-editor-implementation-plan.md)、[マップ編集の検証記録](map-editor-verification.md)、[戦闘表示の実装計画](battle-overlay-implementation-plan.md)。
 
@@ -287,7 +287,7 @@ IMEで確定済みの本文は作業データへ反映し、短い入力のま�
 
 ### 11.3 実行環境とコマンド
 
-実装後、クラス・素材の追加に伴うheadlessインポートを先に実行する。以下は新規テストの作成後に使う予定のコマンドであり、計画書作成時点では実行しない。
+クラス・素材の追加に伴うheadlessインポートを先に実行し、以下で検証する。2026-09-27の実施結果と手動確認の範囲は `docs/verification.md` に記録した。
 
 ```powershell
 $godotExe = 'C:/Program Files/Godot/Godot_v4.6.2-stable_win64_console.exe'
@@ -299,6 +299,7 @@ New-Item -ItemType Directory -Force build | Out-Null
 & $godotExe --headless --path . --log-file ./build/map-editor-test.log --script res://tests/map_editor_test.gd
 & $godotExe --headless --path . --log-file ./build/map-editor-plugin.log --editor --script res://tests/map_editor_plugin_test.gd
 & $godotExe --path . --log-file ./build/render.log --script res://tests/render_smoke.gd
+& $godotExe --path . --log-file ./build/dialogue-render.log --script res://tests/dialogue_render_test.gd
 & $godotExe --path . --log-file ./build/map-editor-render.log --script res://tests/map_editor_test.gd -- --screenshots
 ```
 

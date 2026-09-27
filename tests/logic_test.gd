@@ -131,18 +131,16 @@ func _test_battle() -> void:
 	messages = battle.attack(session, config)
 	_check(battle.enemy_hp == 0 and session.hp == hp_before and battle.outcome == BattleModel.Outcome.VICTORY, "Lethal attack wins without retaliation and clamps enemy HP")
 	_check(messages.size() == 2, "Victory supplies attack and result messages")
-	_check(battle.attack(session, config).is_empty() and battle.escape(session, config).is_empty() and session.hp == hp_before, "Finished battle cannot execute additional commands")
+	_check(battle.attack(session, config).is_empty() and battle.resolve_escape(session, true).is_empty() and session.hp == hp_before, "Finished battle cannot execute additional commands")
 	_check(enemy.max_hp == 12, "Battle damage never changes shared enemy data")
 	battle.setup(enemy)
-	config.escape_chance = 1.0
-	messages = battle.escape(session, config)
+	messages = battle.resolve_escape(session, true)
 	_check(battle.outcome == BattleModel.Outcome.ESCAPED and session.hp == hp_before and messages.size() == 1, "Successful escape preserves HP and produces final message")
 	battle.setup(enemy)
-	config.escape_chance = 0.0
-	messages = battle.escape(session, config)
+	messages = battle.resolve_escape(session, false)
 	_check(battle.outcome == BattleModel.Outcome.ONGOING and session.hp == hp_before - 3 and messages.size() == 2, "Failed escape receives exactly one retaliation")
 	session.hp = 1
-	messages = battle.escape(session, config)
+	messages = battle.resolve_escape(session, false)
 	_check(battle.outcome == BattleModel.Outcome.DEFEAT and session.hp == 0 and messages.size() == 3, "Failed escape can cause defeat with a separate result message")
 	session.heal()
 	battle.setup(enemy)
@@ -151,8 +149,7 @@ func _test_battle() -> void:
 	config.attack_max = 1
 	messages = battle.attack(session, config)
 	_check(battle.outcome == BattleModel.Outcome.DEFEAT and session.hp == 0 and battle.enemy_hp == 11 and messages.size() == 3, "Surviving enemy can defeat player after an attack")
-	# Real probability and variable damage remain reproducible with an injected seed.
-	config.escape_chance = 0.6
+	# Variable damage remains reproducible with an injected seed.
 	config.attack_min = 5
 	config.attack_max = 8
 	var other_battle := BattleModel.new()
@@ -164,4 +161,4 @@ func _test_battle() -> void:
 	battle.rng.seed = 55
 	other_battle.rng.seed = 55
 	_check(battle.attack(session, config) == other_battle.attack(other_session, config) and session.hp == other_session.hp and battle.enemy_hp == other_battle.enemy_hp, "Seed fixes attack damage and retaliation")
-	_check(battle.escape(session, config) == other_battle.escape(other_session, config) and battle.outcome == other_battle.outcome and session.hp == other_session.hp, "Seed fixes probabilistic escape outcome")
+	_check(battle.resolve_escape(session, false) == other_battle.resolve_escape(other_session, false) and battle.outcome == other_battle.outcome and session.hp == other_session.hp, "Seed fixes retaliation damage after escape timeout")

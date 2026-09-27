@@ -3,11 +3,14 @@ extends Control
 
 signal cell_hovered(cell: Vector2i)
 signal operation_failed(message: String)
+signal npc_cell_clicked(cell: Vector2i, erase: bool)
 const Document = preload("res://addons/map_editor/map_edit_document.gd")
 var document: Document
 var brush: TerrainData
 var base_terrain: TerrainData
 var erase_mode: bool = false
+var npc_mode: bool = false
+var selected_npc_id: String = ""
 var tile_size: int = 48
 var zoom: float = 1.0
 var hover := Vector2i(-1, -1)
@@ -70,6 +73,10 @@ func _gui_input(event: InputEvent) -> void:
 		elif event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
 			if event.pressed:
 				grab_focus()
+				if npc_mode:
+					npc_cell_clicked.emit(cell_at_local(event.position), erase_mode or event.button_index == MOUSE_BUTTON_RIGHT)
+					accept_event()
+					return
 				var terrain := base_terrain if erase_mode or event.button_index == MOUSE_BUTTON_RIGHT else brush
 				if document.begin_stroke(terrain):
 					_button = event.button_index
@@ -122,5 +129,12 @@ func _draw() -> void:
 			var center := (Vector2(cell) + Vector2.ONE * 0.5) * side
 			draw_circle(center, side * 0.27, Color(0.1, 0.3, 0.9, 0.7))
 			draw_string(get_theme_default_font(), center + Vector2(-side * 0.2, 5), "S", HORIZONTAL_ALIGNMENT_LEFT, -1, maxi(12, roundi(side * 0.4)), Color.WHITE)
+	for npc in map.npcs:
+		if npc == null or npc.texture == null:
+			continue
+		var rect := Rect2(Vector2(npc.cell) * side, Vector2.ONE * side)
+		draw_texture_rect(npc.texture, rect, false, npc.tint)
+		if npc.id == selected_npc_id:
+			draw_rect(rect.grow(-2), Color.GOLD, false, 3.0)
 	if document.in_bounds(hover):
 		draw_rect(Rect2(Vector2(hover) * side, Vector2.ONE * side), Color.YELLOW, false, 2.0)

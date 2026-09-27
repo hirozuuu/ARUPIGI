@@ -1,6 +1,6 @@
 extends Node
 
-enum State { EXPLORATION, MENU, TRANSITION, BATTLE }
+enum State { EXPLORATION, MENU, TRANSITION, BATTLE, DIALOGUE }
 const CONFIG: GameConfig = preload("res://data/config.tres")
 const MAPS := {
 	"world": preload("res://data/maps/world.tres"),
@@ -18,10 +18,13 @@ var notice_remaining: float = 0.0
 var messages: Array[String] = []
 var message_index: int = 0
 var message_remaining: float = 0.0
+var escape_active := false
+var escape_remaining := 0.0
 var transition_remaining: float = 0.0
 var transition_loaded: bool = false
 var pending_map: String
 var pending_position: Vector2
+var dialogue := DialogueModel.new()
 
 func _ready() -> void:
 	_install_inputs()
@@ -58,12 +61,33 @@ func _install_inputs() -> void:
 				InputMap.action_add_event(action, logical_event)
 
 func _input(event: InputEvent) -> void:
+	if state == State.DIALOGUE and event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			ui.dialogue_view.scroll_choices(-1)
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			ui.dialogue_view.scroll_choices(1)
+		return
 	if event is InputEventKey and event.echo:
 		return
 	if event.is_action_released("confirm"):
 		confirm_armed = true
 		return
 	if state == State.TRANSITION:
+		return
+	if state == State.DIALOGUE:
+		if event.is_action_pressed("move_up"):
+			dialogue.select(-1)
+			ui.dialogue_view.sync_selection()
+		elif event.is_action_pressed("move_down"):
+			dialogue.select(1)
+			ui.dialogue_view.sync_selection()
+		elif event.is_action_pressed("confirm") and confirm_armed:
+			confirm_armed = false
+			if not dialogue.confirm():
+				_set_state(State.EXPLORATION)
+			ui.dialogue_view.choice_scroll = 0
+			ui.dialogue_view.queue_redraw()
+			_refresh_ui()
 		return
 	if event.is_action_pressed("cancel"):
 		if state == State.EXPLORATION:
@@ -81,6 +105,10 @@ func _input(event: InputEvent) -> void:
 		return
 	confirm_armed = false
 	match state:
+		State.EXPLORATION:
+			var target := exploration.talk_target()
+			if target != null:
+				_begin_dialogue(target)
 		State.MENU:
 			_set_state(State.EXPLORATION)
 		State.BATTLE:
@@ -89,6 +117,18 @@ func _input(event: InputEvent) -> void:
 			elif ui.battle_phase == "result":
 				_finish_battle()
 	_refresh_ui()
+
+func _begin_dialogue(target: Npc) -> void:
+	var report := DialogueValidator.validate(target.data.dialogue)
+	if not report.errors.is_empty():
+		push_warning("NPC %s: %s" % [target.data.id, "; ".join(report.errors)])
+		return
+	if not dialogue.start(target.data.dialogue, ui.font):
+		push_warning("NPC %s の会話を開始できません。" % target.data.id)
+		return
+	exploration.player.stop()
+	ui.dialogue_view.set_content(dialogue, target.data.display_name)
+	_set_state(State.DIALOGUE)
 
 func _set_state(next: State) -> void:
 	state = next
@@ -137,12 +177,20 @@ func _physics_process(delta: float) -> void:
 			notice_remaining = maxf(0.0, notice_remaining - delta)
 			if notice_remaining == 0.0:
 				ui.notice = ""
+		State.DIALOGUE:
+			exploration.player.stop()
 		State.BATTLE:
 			exploration.step(delta, CONFIG)
 			session.position = exploration.player.position
 			ui.flash = maxf(0.0, ui.flash - delta)
 			exploration.arena.enemy_art.modulate = Color(1.0, 0.6, 0.5) if ui.flash > 0.0 else Color.WHITE
-			if ui.battle_phase == "busy":
+			if escape_active:
+				escape_remaining = maxf(0.0, escape_remaining - delta)
+				if not exploration.arena.contains_player_art(exploration.player):
+					_resolve_escape(true)
+				elif escape_remaining <= 0.0:
+					_resolve_escape(false)
+			elif ui.battle_phase == "busy":
 				message_remaining -= delta
 				if message_remaining <= 0:
 					message_index += 1
@@ -157,6 +205,8 @@ func _physics_process(delta: float) -> void:
 	_refresh_ui()
 
 func begin_battle(foe: EnemyData) -> void:
+	escape_active = false
+	escape_remaining = 0.0
 	battle.setup(foe)
 	exploration.begin_battle(foe)
 	_set_state(State.BATTLE)
@@ -168,13 +218,34 @@ func begin_battle(foe: EnemyData) -> void:
 
 func _run_action() -> void:
 	ui.battle_phase = "busy"
-	messages = battle.attack(session, CONFIG) if ui.selected == 0 else battle.escape(session, CONFIG)
+	if ui.selected == 1:
+		escape_active = true
+		escape_remaining = maxf(0.05, CONFIG.escape_seconds)
+		exploration.arena.set_boundary_enabled(false)
+		ui.battle_text = "枠の外へ にげろ！"
+		ui.flash = 0.0
+		return
+	messages = battle.attack(session, CONFIG)
 	message_index = 0
 	message_remaining = CONFIG.message_seconds
 	ui.battle_text = messages[0]
 	ui.flash = 0.18
 
+func _resolve_escape(escaped: bool) -> void:
+	escape_active = false
+	escape_remaining = 0.0
+	if not escaped:
+		exploration.arena.return_player_inside(exploration.player)
+		session.position = exploration.player.position
+	exploration.arena.set_boundary_enabled(true)
+	messages = battle.resolve_escape(session, escaped)
+	ui.battle_phase = "command" if battle.outcome == BattleModel.Outcome.ONGOING else "result"
+	ui.battle_text = "\n".join(messages) if ui.battle_phase == "command" else messages[-1]
+	confirm_armed = false
+
 func _finish_battle() -> void:
+	escape_active = false
+	escape_remaining = 0.0
 	ui.notice = ""
 	session.position = exploration.player.position
 	exploration.end_battle()
@@ -188,10 +259,17 @@ func _finish_battle() -> void:
 		_set_state(State.EXPLORATION)
 
 func _refresh_ui() -> void:
-	ui.screen = {State.EXPLORATION: "exploration", State.MENU: "menu", State.TRANSITION: "exploration", State.BATTLE: "battle"}[state]
+	ui.screen = {State.EXPLORATION: "exploration", State.MENU: "menu", State.TRANSITION: "exploration", State.BATTLE: "battle", State.DIALOGUE: "dialogue"}[state]
+	ui.dialogue_view.visible = state == State.DIALOGUE
+	ui.talk_name = ""
+	if state == State.EXPLORATION:
+		var target := exploration.talk_target()
+		if target != null:
+			ui.talk_name = target.data.display_name
 	ui.hp = session.hp
 	ui.max_hp = session.max_hp
 	ui.map_name = MAPS[session.map_id].display_name if MAPS.has(session.map_id) else ""
 	if state == State.BATTLE:
 		ui.battle_rect = exploration.arena.screen_rect()
+		ui.battle_boundary_visible = exploration.arena.boundary_enabled
 	ui.queue_redraw()

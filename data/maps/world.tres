@@ -9,6 +9,30 @@
 [ext_resource type="Resource" path="res://data/terrains/hill.tres" id="7_ibnm2"]
 [ext_resource type="Resource" path="res://data/terrains/sand.tres" id="8_g6dwu"]
 [ext_resource type="Resource" path="res://data/terrains/building.tres" id="9_06xfa"]
+[ext_resource type="Script" path="res://scripts/data/npc_data.gd" id="npc_script"]
+[ext_resource type="Script" path="res://scripts/data/dialogue_data.gd" id="dialogue_script"]
+[ext_resource type="Script" path="res://scripts/data/dialogue_node_data.gd" id="node_script"]
+[ext_resource type="Texture2D" path="res://assets/art/npc.svg" id="npc_texture"]
+
+[sub_resource type="Resource" id="world_npc_node"]
+script = ExtResource("node_script")
+id = "greeting"
+editor_label = "旅の案内"
+text = "こんにちは、旅人さん。ここは町と洞窟をつなぐ野原です。\n東の道には背の高い草が続き、夕暮れには風の音が変わります。\n町では花の泉で体を休められます。遠い道へ進む前に立ち寄ってみてください。\n洞窟へ行くなら、足元にも気をつけて。暗い場所では急がずに進みましょう。\n困ったときは、またここへ戻ってきてくださいね。"
+
+[sub_resource type="Resource" id="world_npc_dialogue"]
+script = ExtResource("dialogue_script")
+start_node_id = "greeting"
+nodes = Array[ExtResource("node_script")]([SubResource("world_npc_node")])
+
+[sub_resource type="Resource" id="world_npc"]
+script = ExtResource("npc_script")
+id = "field_guide"
+display_name = "野原の案内人"
+cell = Vector2i(22, 17)
+texture = ExtResource("npc_texture")
+tint = Color(0.85, 1, 0.88, 1)
+dialogue = SubResource("world_npc_dialogue")
 
 [resource]
 script = ExtResource("4_llkh1")
@@ -40,3 +64,4 @@ portals = Array[Dictionary]([{
 }])
 encounters_enabled = true
 enemies = Array[ExtResource("1_63011")]([ExtResource("2_8yqni"), ExtResource("3_281i5")])
+npcs = Array[ExtResource("npc_script")]([SubResource("world_npc")])

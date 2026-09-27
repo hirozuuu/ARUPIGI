@@ -31,6 +31,29 @@ static func copy_map(source: MapData) -> MapData:
 	result.portals = source.portals.duplicate(true)
 	result.healing_cells = source.healing_cells.duplicate()
 	result.enemies = source.enemies.duplicate()
+	result.npcs = copy_npcs(source.npcs)
+	return result
+
+static func copy_npcs(source: Array[NpcData]) -> Array[NpcData]:
+	var result: Array[NpcData] = []
+	for npc in source:
+		if npc == null:
+			result.append(null)
+			continue
+		var copied := npc.duplicate(false) as NpcData
+		if npc.dialogue != null:
+			copied.dialogue = npc.dialogue.duplicate(false) as DialogueData
+			copied.dialogue.nodes = []
+			for node in npc.dialogue.nodes:
+				if node == null:
+					copied.dialogue.nodes.append(null)
+					continue
+				var node_copy := node.duplicate(false) as DialogueNodeData
+				node_copy.choices = []
+				for choice in node.choices:
+					node_copy.choices.append(choice.duplicate(false) as DialogueChoiceData if choice != null else null)
+				copied.dialogue.nodes.append(node_copy)
+		result.append(copied)
 	return result
 
 func open(file_path: String) -> bool:
@@ -50,10 +73,13 @@ func open(file_path: String) -> bool:
 	return true
 
 func _snapshot() -> Dictionary:
-	return {"rows": data.rows.duplicate(), "terrains": data.terrains.duplicate()}
+	return {"rows": data.rows.duplicate(), "terrains": data.terrains.duplicate(), "npcs": copy_npcs(data.npcs)}
+
+static func same_state(a: Dictionary, b: Dictionary) -> bool:
+	return storage_value(a) == storage_value(b)
 
 func is_dirty() -> bool:
-	return data != null and _snapshot() != _saved
+	return data != null and not same_state(_snapshot(), _saved)
 
 func in_bounds(cell: Vector2i) -> bool:
 	return data != null and cell.x >= 0 and cell.y >= 0 and cell.x < data.width and cell.y < data.height
@@ -73,7 +99,7 @@ func key_for(terrain: TerrainData) -> String:
 func begin_stroke(terrain: TerrainData) -> bool:
 	end_stroke()
 	last_error = ""
-	if data == null or not Validator.validate(data).errors.is_empty():
+	if data == null or not Validator.validate(data, {}, false).errors.is_empty():
 		return _fail("形式不正のマップは編集できません。検証メッセージを確認してください。")
 	if terrain == null or terrain.texture == null or terrain.id.is_empty():
 		return _fail("有効な地形を選択してください。")
@@ -127,7 +153,7 @@ func end_stroke() -> void:
 		return
 	_active = false
 	var after := _snapshot()
-	if after == _before:
+	if same_state(after, _before):
 		return
 	history.create_action("地形を配置")
 	history.add_do_method(_restore.bind(after))
@@ -140,7 +166,53 @@ func end_stroke() -> void:
 func _restore(state: Dictionary) -> void:
 	data.rows = state.rows.duplicate()
 	data.terrains = state.terrains.duplicate()
+	data.npcs = copy_npcs(state.npcs)
 	changed.emit()
+
+func commit_npcs(before: Dictionary, description: String) -> void:
+	var after := _snapshot()
+	if same_state(before, after):
+		return
+	history.create_action(description)
+	history.add_do_method(_restore.bind(after))
+	history.add_undo_method(_restore.bind(before))
+	history.commit_action(false)
+	changed.emit()
+	committed.emit()
+
+func npc_at(cell: Vector2i) -> NpcData:
+	for npc in data.npcs:
+		if npc != null and npc.cell == cell:
+			return npc
+	return null
+
+func placement_error(cell: Vector2i, except_id: String = "") -> String:
+	if not in_bounds(cell):
+		return "マップ範囲外です。"
+	if not data.is_walkable(cell):
+		return "通行不可の地形です。"
+	for npc in data.npcs:
+		if npc != null and npc.cell == cell and npc.id != except_id:
+			return "別のNPCがいます。"
+	for spawn in data.spawns.values():
+		if spawn is Vector2i and spawn == cell:
+			return "出現位置と重なります。"
+	for portal in data.portals:
+		if portal.get("cell") is Vector2i and portal.get("cell") == cell:
+			return "出入口と重なります。"
+	if data.healing_cells.has(cell):
+		return "回復地点と重なります。"
+	return ""
+
+func new_id(prefix: String) -> String:
+	var used: Dictionary = {}
+	for npc in data.npcs:
+		if npc != null:
+			used[npc.id] = true
+	var index := 1
+	while used.has("%s_%d" % [prefix, index]):
+		index += 1
+	return "%s_%d" % [prefix, index]
 
 func undo() -> void:
 	end_stroke()

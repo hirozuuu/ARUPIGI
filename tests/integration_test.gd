@@ -20,7 +20,7 @@ func _run() -> void:
 		_finish()
 		return
 	var original_chance: float = config.encounter_chance
-	var original_escape: float = config.escape_chance
+	var original_escape: float = config.escape_seconds
 	var original_min: int = config.attack_min
 	var original_max: int = config.attack_max
 	var original_message: float = config.message_seconds
@@ -28,6 +28,7 @@ func _run() -> void:
 	config.encounter_chance = 0.0
 	config.transition_seconds = 0.025
 	config.message_seconds = 0.04
+	config.escape_seconds = 0.08
 	game = load("res://scenes/main.tscn").instantiate()
 	root.add_child(game)
 	_check(game.state == MainScript.State.EXPLORATION and game.exploration.visible, "Main scene starts directly in visible exploration without input")
@@ -42,9 +43,10 @@ func _run() -> void:
 	await _test_arena()
 	await _test_camera_return()
 	await _test_battles()
+	await _test_escape_movement()
 	await _test_restart()
 	config.encounter_chance = original_chance
-	config.escape_chance = original_escape
+	config.escape_seconds = original_escape
 	config.attack_min = original_min
 	config.attack_max = original_max
 	config.message_seconds = original_message
@@ -558,15 +560,14 @@ func _test_battles() -> void:
 	_key(KEY_ENTER, true, true)
 	_check(game.ui.battle_phase == "command" and game.battle.enemy_hp == game.battle.enemy.max_hp, "Enter held across battle entry does not choose a command")
 	_key(KEY_ENTER, false)
-	config.escape_chance = 0.0
 	await _tap(KEY_DOWN)
 	var hp_before: int = game.session.hp
 	await _tap(KEY_ENTER)
 	await _wait_messages()
 	_check(game.ui.battle_phase == "command" and game.battle.outcome == BattleModel.Outcome.ONGOING and game.session.hp < hp_before, "Failed escape retaliates and returns to command selection: phase=%s outcome=%s hp=%d before=%d" % [game.ui.battle_phase, game.battle.outcome, game.session.hp, hp_before])
-	config.escape_chance = 1.0
 	await _frames(1)
 	await _tap(KEY_ENTER)
+	game.exploration.player.position.x = game.exploration.arena.world_rect.end.x + 40.0
 	await _wait_messages()
 	var escape_hp: int = game.session.hp
 	await _frames(1)
@@ -597,6 +598,86 @@ func _test_battles() -> void:
 	await _wait_state(MainScript.State.EXPLORATION)
 	_check(game.session.map_id == "town" and game.session.position == MAPS.town.spawn_position("recovery", config.tile_size) and game.session.hp == config.max_hp, "Defeat returns to safe town recovery spawn at full HP")
 	_check(not game.exploration.arena.active and game.exploration.player.collision_mask == 1 and game.exploration.camera.get_parent() == game.exploration.player, "Defeat restores terrain collision and following camera")
+
+
+func _test_escape_movement() -> void:
+	await _place("world", MAPS.world.spawn_position("start", config.tile_size))
+	var player: Player = game.exploration.player
+	var arena: BattleArena = game.exploration.arena
+	config.escape_seconds = 1.3
+	for direction: Vector2 in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]:
+		game.session.heal()
+		game.begin_battle(MAPS.world.enemies[0])
+		var r := arena.world_rect
+		var edge := r.get_center() + direction * r.size * 0.5
+		if direction.y != 0.0:
+			edge.x += 110.0 # 敵を避けて上辺も横切る。
+		player.position = edge - direction * 30.0
+		await _frames(1)
+		game.ui.selected = 1
+		var hp_before: int = game.session.hp
+		await _tap(KEY_ENTER)
+		_check(game.escape_active and game.ui.battle_phase == "busy" and not game.ui.battle_boundary_visible, "Escape command immediately hides the boundary and locks commands")
+		_check(arena.walls.all(func(wall: StaticBody2D) -> bool: return wall.collision_layer == 0) and arena.enemy_body.collision_layer == BattleArena.BATTLE_LAYER, "Escape opens all four walls while keeping enemy collision")
+		_check(game.session.hp == hp_before and game.battle.outcome == BattleModel.Outcome.ONGOING, "Starting escape does not roll success or apply premature retaliation")
+		await _tap(KEY_ENTER)
+		_check(game.escape_active and game.session.hp == hp_before, "Confirm during escape cannot execute another command")
+		# 足元が枠外でも画像が残っていれば成功させない。
+		player.position = edge + direction * 2.0
+		await _frames(1)
+		_check(game.escape_active and game.battle.outcome == BattleModel.Outcome.ONGOING, "Partial sprite crossing does not count as escape on any edge")
+		var code: Key = KEY_A if direction.x < 0 else KEY_D if direction.x > 0 else KEY_W if direction.y < 0 else KEY_S
+		_key(code, true)
+		for frame in 40:
+			if not game.escape_active:
+				break
+			await _frames(1)
+		_key(code, false)
+		_check(game.battle.outcome == BattleModel.Outcome.ESCAPED and game.ui.battle_phase == "result" and not arena.contains_player_art(player), "Walking the complete animated sprite past any edge succeeds")
+		_check(game.session.hp == hp_before and game.ui.battle_boundary_visible and arena.boundary_enabled, "Successful escape preserves HP and closes the temporary opening")
+		var escaped_position := player.position
+		await _frames(1) # 結果切替後に決定キーが離れているフレームを挟む。
+		await _tap(KEY_ENTER)
+		_check(game.state == MainScript.State.EXPLORATION and game.session.position == escaped_position and player.collision_mask == 1 and not arena.active, "Escape result restores exploration at the actual outside position")
+		await _place("world", MAPS.world.spawn_position("start", config.tile_size))
+	# 時間切れでは四辺のまたぎを解消し、その後の移動を壁が止める。
+	for direction: Vector2 in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]:
+		game.session.heal()
+		game.begin_battle(MAPS.world.enemies[0])
+		var r := arena.world_rect
+		var edge := r.get_center() + direction * r.size * 0.5
+		if direction.y != 0.0:
+			edge.x += 110.0
+		game.ui.selected = 1
+		game._run_action()
+		player.position = edge + direction * 2.0
+		game.escape_remaining = 0.01
+		var hp_before: int = game.session.hp
+		await _frames(1)
+		_check(game.ui.battle_phase == "command" and game.battle.outcome == BattleModel.Outcome.ONGOING and not game.escape_active, "Escape timeout returns to command selection")
+		_check(r.grow(0.01).encloses(player.visual_world_rect()) and game.session.position == player.position, "Timeout moves the entire sprite back inside and updates the session")
+		_check(game.session.hp < hp_before and game.ui.battle_boundary_visible and arena.walls.all(func(wall: StaticBody2D) -> bool: return wall.collision_layer == BattleArena.BATTLE_LAYER), "Timeout retaliates and restores visible physical walls")
+		var hp_after: int = game.session.hp
+		var code: Key = KEY_A if direction.x < 0 else KEY_D if direction.x > 0 else KEY_W if direction.y < 0 else KEY_S
+		_key(code, true)
+		await _frames(20)
+		_key(code, false)
+		_check(r.has_point(player.position) and game.session.hp == hp_after and game.battle.outcome == BattleModel.Outcome.ONGOING, "After timeout walls block escape and retaliation happens only once")
+		game.battle.outcome = BattleModel.Outcome.VICTORY
+		game._finish_battle()
+		await _place("world", MAPS.world.spawn_position("start", config.tile_size))
+	game.begin_battle(MAPS.world.enemies[0])
+	game.session.hp = 1
+	game.ui.selected = 1
+	game._run_action()
+	game.escape_remaining = 0.01
+	await _frames(1)
+	_check(game.battle.outcome == BattleModel.Outcome.DEFEAT and game.session.hp == 0 and game.ui.battle_phase == "result" and arena.boundary_enabled, "Lethal escape-timeout retaliation closes the boundary and shows defeat")
+	await _frames(1)
+	await _tap(KEY_ENTER)
+	await _wait_state(MainScript.State.EXPLORATION)
+	_check(game.session.map_id == "town" and game.session.hp == config.max_hp and not arena.active, "Escape-timeout defeat restores the healed town state")
+	config.escape_seconds = 0.08
 
 
 func _test_restart() -> void:

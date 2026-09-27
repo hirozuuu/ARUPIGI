@@ -18,10 +18,17 @@ var battle_phase: String = "command"
 var flash: float = 0.0
 var fade: float = 0.0
 var battle_rect: Rect2
+var battle_boundary_visible := true
+var talk_name: String = ""
+var dialogue_view: DialogueView
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dialogue_view = DialogueView.new()
+	add_child(dialogue_view)
+	dialogue_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dialogue_view.visible = false
 
 func text_at(value: String, point: Vector2, size_px: int = 22, color: Color = PAPER) -> void:
 	var line_index := 0
@@ -58,9 +65,15 @@ func _draw() -> void:
 		panel(Rect2(22, 20, 240, 87))
 		text_at(map_name, Vector2(40, 53), 22)
 		text_at("旅人  HP  %02d / %02d" % [hp, max_hp], Vector2(40, 84), 20, GOLD)
-		panel(Rect2(730, 22, 208, 48))
-		text_at("Esc  旅のメニュー", Vector2(747, 54), 19)
-		if not notice.is_empty():
+		if screen != "dialogue":
+			panel(Rect2(730, 22, 208, 48))
+			text_at("Esc  旅のメニュー", Vector2(747, 54), 19)
+		if screen == "dialogue":
+			pass
+		elif not talk_name.is_empty():
+			panel(Rect2(215, 556, 530, 60))
+			centered("Enter  %s と話す" % talk_name, 594, 21, GOLD)
+		elif not notice.is_empty():
 			panel(Rect2(150, 536, 660, 66))
 			centered(notice, 578, 21)
 		else:
@@ -86,7 +99,8 @@ func _draw_battle() -> void:
 	draw_rect(Rect2(0, r.end.y, size.x, maxf(0.0, size.y - r.end.y)), shade)
 	draw_rect(Rect2(0, r.position.y, maxf(0.0, r.position.x), r.size.y), shade)
 	draw_rect(Rect2(r.end.x, r.position.y, maxf(0.0, size.x - r.end.x), r.size.y), shade)
-	draw_rect(r, PAPER, false, 3.0)
+	if battle_boundary_visible:
+		draw_rect(r, PAPER, false, 3.0)
 	panel(Rect2(28, 24, 240, 75))
 	text_at("旅人  HP  %02d / %02d" % [hp, max_hp], Vector2(45, 71), 22, GOLD)
 	if enemy != null:

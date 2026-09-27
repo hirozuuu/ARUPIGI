@@ -13,6 +13,7 @@ var walls: Array[StaticBody2D] = []
 var enemy_body: StaticBody2D
 var enemy_art: Sprite2D
 var active := false
+var boundary_enabled := false
 
 func _ready() -> void:
 	visible = false
@@ -50,6 +51,7 @@ func begin(foe: EnemyData) -> void:
 	_set_wall(2, Vector2(world_rect.get_center().x, world_rect.position.y - t * 0.5), Vector2(world_rect.size.x + 2.0 * t, t))
 	_set_wall(3, Vector2(world_rect.get_center().x, world_rect.end.y + t * 0.5), Vector2(world_rect.size.x + 2.0 * t, t))
 	enemy_body.position = enemy_rect.get_center()
+	enemy_body.z_index = roundi(enemy_body.position.y)
 	(enemy_body.get_child(0) as CollisionShape2D).shape.size = enemy_rect.size
 	enemy_art.texture = foe.texture
 	var texture_size := enemy_art.texture.get_size()
@@ -57,9 +59,31 @@ func begin(foe: EnemyData) -> void:
 	enemy_art.modulate = Color.WHITE
 	active = true
 	visible = true
-	for wall in walls:
-		wall.collision_layer = BATTLE_LAYER
+	set_boundary_enabled(true)
 	set_enemy_active(true)
+
+func set_boundary_enabled(enabled: bool) -> void:
+	boundary_enabled = enabled and active
+	for wall in walls:
+		wall.collision_layer = BATTLE_LAYER if boundary_enabled else 0
+
+func contains_player_art(player: Player) -> bool:
+	# 接触中も未脱出。足元だけでなく歩行中の回転・上下動を含む画像全体で判定する。
+	return world_rect.intersects(player.visual_world_rect(), true)
+
+func return_player_inside(player: Player) -> void:
+	var bounds := player.visual_world_rect().merge(Rect2(player.global_position - Vector2.ONE * Player.COLLISION_RADIUS, Vector2.ONE * Player.COLLISION_RADIUS * 2.0))
+	var offset := Vector2.ZERO
+	if bounds.position.x < world_rect.position.x:
+		offset.x = world_rect.position.x - bounds.position.x
+	elif bounds.end.x > world_rect.end.x:
+		offset.x = world_rect.end.x - bounds.end.x
+	if bounds.position.y < world_rect.position.y:
+		offset.y = world_rect.position.y - bounds.position.y
+	elif bounds.end.y > world_rect.end.y:
+		offset.y = world_rect.end.y - bounds.end.y
+	player.global_position += offset
+	player.velocity = Vector2.ZERO
 
 func _set_wall(index: int, center: Vector2, shape_size: Vector2) -> void:
 	walls[index].position = center
@@ -72,8 +96,7 @@ func set_enemy_active(enabled: bool) -> void:
 func end() -> void:
 	active = false
 	visible = false
-	for wall in walls:
-		wall.collision_layer = 0
+	set_boundary_enabled(false)
 	set_enemy_active(false)
 
 func screen_rect() -> Rect2:

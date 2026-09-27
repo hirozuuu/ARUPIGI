@@ -35,12 +35,11 @@ func attack(session: GameSession, config: GameConfig) -> Array[String]:
 	return messages
 
 
-func escape(session: GameSession, config: GameConfig) -> Array[String]:
+func resolve_escape(session: GameSession, escaped: bool) -> Array[String]:
 	var messages: Array[String] = []
 	if outcome != Outcome.ONGOING or enemy == null:
 		return messages
-	var chance: float = clampf(config.escape_chance, 0.0, 1.0)
-	if chance >= 1.0 or (chance > 0.0 and rng.randf() < chance):
+	if escaped:
 		outcome = Outcome.ESCAPED
 		messages.append("うまく にげきれた！")
 	else:

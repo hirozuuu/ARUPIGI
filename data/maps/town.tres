@@ -6,6 +6,59 @@
 [ext_resource type="Resource" path="res://data/terrains/plain.tres" id="plain"]
 [ext_resource type="Resource" path="res://data/terrains/building.tres" id="building"]
 [ext_resource type="Resource" path="res://data/terrains/floor.tres" id="floor"]
+[ext_resource type="Script" path="res://scripts/data/npc_data.gd" id="npc_script"]
+[ext_resource type="Script" path="res://scripts/data/dialogue_data.gd" id="dialogue_script"]
+[ext_resource type="Script" path="res://scripts/data/dialogue_node_data.gd" id="node_script"]
+[ext_resource type="Script" path="res://scripts/data/dialogue_choice_data.gd" id="choice_script"]
+[ext_resource type="Texture2D" path="res://assets/art/npc.svg" id="npc_texture"]
+
+[sub_resource type="Resource" id="town_choice_town"]
+script = ExtResource("choice_script")
+text = "町について"
+next_node_id = "about_town"
+
+[sub_resource type="Resource" id="town_choice_cave"]
+script = ExtResource("choice_script")
+text = "洞窟について"
+next_node_id = "about_cave"
+
+[sub_resource type="Resource" id="town_choice_end"]
+script = ExtResource("choice_script")
+text = "もう大丈夫"
+
+[sub_resource type="Resource" id="town_node_start"]
+script = ExtResource("node_script")
+id = "ask"
+editor_label = "案内（開始）"
+text = "何を知りたいですか？"
+choices = Array[ExtResource("choice_script")]([SubResource("town_choice_town"), SubResource("town_choice_cave"), SubResource("town_choice_end")])
+
+[sub_resource type="Resource" id="town_node_town"]
+script = ExtResource("node_script")
+id = "about_town"
+editor_label = "町の返答"
+text = "町の北には、休める花の泉があります。旅で疲れたら、泉の印を踏んでみてください。"
+next_node_id = "ask"
+
+[sub_resource type="Resource" id="town_node_cave"]
+script = ExtResource("node_script")
+id = "about_cave"
+editor_label = "洞窟の返答"
+text = "洞窟へ行くなら、準備を忘れずに。野原の岩の印から入れます。"
+
+[sub_resource type="Resource" id="town_dialogue"]
+script = ExtResource("dialogue_script")
+start_node_id = "ask"
+nodes = Array[ExtResource("node_script")]([SubResource("town_node_start"), SubResource("town_node_town"), SubResource("town_node_cave")])
+
+[sub_resource type="Resource" id="town_npc"]
+script = ExtResource("npc_script")
+id = "town_resident"
+display_name = "町の住人"
+cell = Vector2i(9, 11)
+texture = ExtResource("npc_texture")
+tint = Color(0.9, 0.86, 1, 1)
+dialogue = SubResource("town_dialogue")
 
 [resource]
 script = ExtResource("map_script")
@@ -38,3 +91,4 @@ portals = Array[Dictionary]([{"cell": Vector2i(10, 13), "target_map": "world", "
 healing_cells = Array[Vector2i]([Vector2i(10, 5)])
 encounters_enabled = false
 enemies = Array[ExtResource("enemy_script")]([])
+npcs = Array[ExtResource("npc_script")]([SubResource("town_npc")])

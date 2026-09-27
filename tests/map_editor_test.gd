@@ -220,6 +220,19 @@ func _test_panel() -> void:
 		check(panel._open_now(map_path), "Panel opens shipped map " + map_path)
 		check(panel.canvas.custom_minimum_size == Vector2(panel.document.data.width, panel.document.data.height) * panel.canvas.tile_size, "Canvas follows map extent")
 		await _capture(panel.document.data.id)
+		if panel.document.data.id == "town":
+			panel.edit_kind.select(1)
+			panel.edit_kind.item_selected.emit(1)
+			panel._select_npc("town_resident")
+			await _capture("npc_editor")
+			panel.npc_detail.dialogue_panel._start_preview(false)
+			panel.npc_scroll.scroll_vertical = 1600
+			await process_frame
+			await _capture("dialogue_editor_preview")
+			panel.npc_detail.dialogue_panel._stop_preview()
+			panel.npc_scroll.scroll_vertical = 0
+			panel.edit_kind.select(0)
+			panel.edit_kind.item_selected.emit(0)
 	check(panel.canvas.base_terrain.id == "floor", "Dungeon default erase base is floor")
 	panel._open_now(fixture("panel", MAPS.town))
 	await process_frame
@@ -361,6 +374,27 @@ func _test_input(panel: EditorPanel) -> void:
 	scroll.scroll_vertical = 0
 	await process_frame
 	await _capture("input")
+	panel.edit_kind.select(1)
+	panel.edit_kind.item_selected.emit(1)
+	panel._new_npc()
+	panel.canvas.zoom = 2.0
+	panel.canvas.update_extent()
+	await process_frame
+	scroll.scroll_horizontal = 96
+	scroll.scroll_vertical = 96
+	await process_frame
+	origin = panel.canvas.global_position
+	_mouse_button(origin + Vector2(240, 240), true)
+	_mouse_button(origin + Vector2(240, 240), false)
+	check(panel.document.npc_at(Vector2i(2, 2)) != null, "Scrolled 200% canvas places NPC in indicated cell")
+	panel.document.undo()
+	check(panel.document.npc_at(Vector2i(2, 2)) == null, "GUI NPC placement is undoable")
+	panel.edit_kind.select(0)
+	panel.edit_kind.item_selected.emit(0)
+	panel.canvas.zoom = 1.0
+	panel.canvas.update_extent()
+	scroll.scroll_horizontal = 0
+	scroll.scroll_vertical = 0
 
 func _capture(label: String) -> void:
 	if not "--screenshots" in OS.get_cmdline_user_args():

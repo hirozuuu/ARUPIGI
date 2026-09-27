@@ -50,3 +50,7 @@ GPUキャプチャは `build/map-editor-tests/screenshots/` の野原・町・�
 `--editor --script` を組み合わせた検証プロセスの終了時にSceneTree・描画Resourceの残存警告が出る。通常の `--editor --quit` と単独の編集テストでは残存警告は出ない。実エディタテスト用プロセスの終了方法に限定した制約として記録する。
 
 Windowsビルドの作成・テストは今回実施していない。
+
+## NPCと会話の追加検証（2026-09-27）
+
+`map_editor_test.gd` はNPC画面、200%表示・スクロール後の配置とUndoを追加して114項目成功。GPU実行ではNPC詳細と会話プレビューを含む121項目・7画像を保存した。`map_editor_plugin_test.gd` は確定済みのNPC名と本文を未確定の履歴から保存フックへ渡し、再有効化後の復旧まで14項目成功した。いずれも終了コード0。会話Resourceの複製、分岐の保存、実ゲームへの反映は `tests/dialogue_test.gd` の86項目で確認した。詳細は [検証記録](verification.md) を参照。
