@@ -7,6 +7,9 @@ var camera: Camera2D
 var arena: BattleArena
 var saved_collision_mask: int = 1
 var last_healing_cell := Vector2i(-999, -999)
+var camera_return_start := Vector2.ZERO
+var camera_return_progress := 1.0
+var camera_return_distance := 1.0
 
 func _ready() -> void:
 	map = MapController.new()
@@ -24,14 +27,23 @@ func enter(map_data: MapData, point: Vector2, config: GameConfig) -> void:
 	player.position = point
 	player.velocity = Vector2.ZERO
 	last_healing_cell = Vector2i(-999, -999)
+	camera.position = Vector2.ZERO
+	camera_return_progress = 1.0
 	camera.reset_smoothing()
 	camera.force_update_scroll()
 
 func step(delta: float, config: GameConfig) -> float:
 	var direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	return player.move_player(direction, config.move_speed, delta)
+	var distance := player.move_player(direction, config.move_speed, delta)
+	if not arena.active and distance > 0.01 and camera_return_progress < 1.0:
+		# 実際に歩いた距離だけ進め、停止中や壁にぶつかった間は画面を動かさない。
+		camera_return_progress = minf(1.0, camera_return_progress + distance / camera_return_distance)
+		camera.position = camera_return_start * (1.0 - smoothstep(0.0, 1.0, camera_return_progress))
+		camera.force_update_scroll()
+	return distance
 
 func begin_battle(foe: EnemyData) -> void:
+	camera_return_progress = 1.0
 	camera.reparent(self, true)
 	camera.force_update_scroll()
 	arena.begin(foe)
@@ -42,8 +54,11 @@ func end_battle() -> void:
 	arena.end()
 	player.collision_mask = saved_collision_mask
 	player.velocity = Vector2.ZERO
-	camera.reparent(player, false)
-	camera.position = Vector2.ZERO
+	camera.reparent(player, true)
+	camera_return_start = camera.position
+	camera_return_progress = 0.0 if not camera_return_start.is_zero_approx() else 1.0
+	# 補間の始点・終点で速度を滑らかにし、移動距離が十分なら必ず基準位置に着く。
+	camera_return_distance = maxf(map.tile_size * 4.0, camera_return_start.length() * 1.5)
 	camera.force_update_scroll()
 
 func newly_healing() -> bool:

@@ -40,6 +40,7 @@ func _run() -> void:
 	await _test_town_encounters()
 	await _test_healing()
 	await _test_arena()
+	await _test_camera_return()
 	await _test_battles()
 	await _test_restart()
 	config.encounter_chance = original_chance
@@ -466,6 +467,36 @@ func _test_arena() -> void:
 	game._finish_battle()
 	game.session.heal()
 	await _place("world", MAPS.world.spawn_position("start", config.tile_size))
+
+
+func _test_camera_return() -> void:
+	await _place("town", MAPS.town.spawn_position("recovery", config.tile_size))
+	var player: Player = game.exploration.player
+	var camera: Camera2D = game.exploration.camera
+	game.begin_battle(MAPS.world.enemies[0])
+	player.position += Vector2(64.0, 0.0)
+	await _frames(2)
+	var fixed_camera := camera.global_position
+	var fixed_map_screen: Vector2 = game.exploration.map.get_global_transform_with_canvas().origin
+	game.battle.outcome = BattleModel.Outcome.ESCAPED
+	game._finish_battle()
+	var initial_offset := camera.position.length()
+	_check(game.state == MainScript.State.EXPLORATION and camera.global_position.distance_to(fixed_camera) < 0.01 and game.exploration.map.get_global_transform_with_canvas().origin.distance_to(fixed_map_screen) < 0.1, "Battle finish preserves the camera and background position")
+	_check(initial_offset > 50.0 and camera.get_parent() == player, "Battle finish keeps the offset while restoring camera parenting")
+	await _frames(10)
+	_check(camera.global_position.distance_to(fixed_camera) < 0.01 and absf(camera.position.length() - initial_offset) < 0.01, "Camera remains still while the player is idle")
+	_key(KEY_D, true)
+	await _frames(20)
+	_key(KEY_D, false)
+	var partial_offset := camera.position.length()
+	var paused_camera := camera.global_position
+	_check(partial_offset > 0.5 and partial_offset < initial_offset and paused_camera.distance_to(fixed_camera) > 0.1, "Field movement gradually moves the camera toward its default offset")
+	await _frames(10)
+	_check(camera.global_position.distance_to(paused_camera) < 0.01 and absf(camera.position.length() - partial_offset) < 0.01, "Camera return pauses when field movement stops")
+	_key(KEY_D, true)
+	await _frames(55)
+	_key(KEY_D, false)
+	_check(camera.position == Vector2.ZERO and camera.global_position.distance_to(player.global_position) < 0.01, "Continued field movement reaches the exact default camera position")
 
 
 func _check_arena_display() -> void:
