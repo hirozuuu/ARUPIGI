@@ -177,6 +177,7 @@ func _test_editor() -> void:
 	check(panel.document.data.npcs[0].dialogue.nodes.size() == 4, "Editor adds dialogue node")
 	editor._add_choice()
 	check(editor._selected_node().choices.size() == 1, "Editor adds choice")
+	await _test_editor_typing(panel)
 	var values := Document.map_values(panel.document.data)
 	editor._start_preview(false)
 	check(editor.preview_model.current != null, "Preview starts from copied dialogue")
@@ -192,6 +193,59 @@ func _test_editor() -> void:
 	_test_editor_repairs(panel)
 	panel.document.history.clear_history()
 	panel.queue_free()
+	await process_frame
+
+func _test_editor_typing(panel: EditorPanel) -> void:
+	var editor = panel.npc_detail.dialogue_panel
+	for field: LineEdit in [editor.label_edit, editor.choice_edit]:
+		field.grab_focus()
+		field.text = "あいうえお"
+		field.caret_column = 3
+		field.text_changed.emit(field.text)
+		await create_timer(0.9).timeout
+		check(editor._pending_before.is_empty(), "Line edit idle timer commits pending text")
+		check(field.has_focus() and field.caret_column == 3, "Idle commit preserves line edit focus and caret")
+		field.insert_text_at_caret("追")
+		field.text_changed.emit(field.text)
+		check(field.text == "あいう追えお", "Typing after idle commit continues at the previous caret")
+		editor.flush_text()
+		field.select(1, 3)
+		panel.document.changed.emit()
+		check(field.has_selection() and field.get_selected_text() == "いう", "Unchanged refresh preserves line edit selection")
+		panel.undo_current()
+		check(field.text == "あいうえお", "Undo still refreshes line edit text")
+		panel.redo_current()
+		check(field.text == "あいう追えお", "Redo still refreshes line edit text")
+	var body: TextEdit = editor.body_edit
+	body.grab_focus()
+	body.text = "最初の行\nあいうえお\n最後の行"
+	body.set_caret_line(1)
+	body.set_caret_column(3)
+	body.text_changed.emit()
+	await process_frame
+	await create_timer(0.9).timeout
+	check(editor._pending_before.is_empty(), "Body idle timer commits pending text")
+	check(body.has_focus() and body.get_caret_line() == 1 and body.get_caret_column() == 3, "Idle commit preserves multiline body focus and caret")
+	body.insert_text_at_caret("追")
+	await process_frame
+	check(body.text == "最初の行\nあいう追えお\n最後の行", "Body typing after idle commit continues on the same line")
+	editor.flush_text()
+	body.select(1, 1, 1, 3)
+	panel.document.changed.emit()
+	check(body.has_selection() and body.get_selected_text() == "いう", "Unchanged refresh preserves body selection")
+	panel.undo_current()
+	check(body.text == "最初の行\nあいうえお\n最後の行", "Undo still refreshes body text")
+	panel.redo_current()
+	check(body.text == "最初の行\nあいう追えお\n最後の行", "Redo still refreshes body text")
+	var edited_node_id: String = editor.node_id
+	var edited_label: String = editor.label_edit.text
+	editor.node_id = "ask"
+	editor.refresh()
+	check(editor.label_edit.text == editor._selected_node().editor_label and body.text == editor._selected_node().text, "Selecting another node refreshes its text")
+	editor.node_id = edited_node_id
+	editor.refresh()
+	check(editor.label_edit.text == edited_label and body.text == "最初の行\nあいう追えお\n最後の行", "Returning to edited node restores its text")
+	body.release_focus()
 	await process_frame
 
 func _test_editor_repairs(panel: EditorPanel) -> void:

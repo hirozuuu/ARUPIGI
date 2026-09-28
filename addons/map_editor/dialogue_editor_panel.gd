@@ -200,8 +200,13 @@ func refresh() -> void:
 			nodes.select(nodes.item_count - 1)
 	label_edit.editable = node != null
 	body_edit.editable = node != null
-	label_edit.text = node.editor_label if node != null else ""
-	body_edit.text = node.text if node != null else ""
+	# 入力確定後もrefreshされるため、同じ文字列を再設定してキャレットや選択を消さない。
+	var label_text := node.editor_label if node != null else ""
+	if label_edit.text != label_text:
+		label_edit.text = label_text
+	var body_text := node.text if node != null else ""
+	if body_edit.text != body_text:
+		body_edit.text = body_text
 	_fill_targets(next_option, node.next_node_id if node != null else "")
 	next_option.disabled = node == null or not node.choices.is_empty()
 	choices.clear()
@@ -214,7 +219,9 @@ func refresh() -> void:
 		choices.select(choice_index)
 	var choice: DialogueChoiceData = node.choices[choice_index] if node != null and choice_index >= 0 else null
 	choice_edit.editable = choice != null
-	choice_edit.text = choice.text if choice != null else ""
+	var choice_text := choice.text if choice != null else ""
+	if choice_edit.text != choice_text:
+		choice_edit.text = choice_text
 	_fill_targets(choice_next, choice.next_node_id if choice != null else "")
 	choice_next.disabled = choice == null
 	_busy = false
