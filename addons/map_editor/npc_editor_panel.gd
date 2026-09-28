@@ -10,7 +10,6 @@ var _busy := false
 var _pending_before: Dictionary = {}
 var _pending_description: String = ""
 var _typing := Timer.new()
-var name_edit := LineEdit.new()
 var texture_edit := LineEdit.new()
 var tint_edit := ColorPickerButton.new()
 var dialogue_panel: VBoxContainer
@@ -22,10 +21,6 @@ func _ready() -> void:
 	_typing.wait_time = 0.7
 	_typing.timeout.connect(flush_text)
 	add_child(_typing)
-	add_child(_label("NPCの名前"))
-	add_child(name_edit)
-	name_edit.text_changed.connect(func(value: String): _type_change("NPCの名前を編集", func(): _npc().display_name = value))
-	name_edit.focus_exited.connect(flush_text)
 	add_child(_label("画像のResourceパス"))
 	add_child(texture_edit)
 	texture_edit.text_submitted.connect(func(_value: String): _commit_texture())
@@ -80,7 +75,6 @@ func refresh() -> void:
 	var npc := _npc()
 	visible = npc != null
 	if npc != null:
-		name_edit.text = npc.display_name
 		texture_edit.text = npc.texture.resource_path if npc.texture != null else ""
 		tint_edit.color = npc.tint
 		reset_dialogue_button.visible = npc.dialogue == null

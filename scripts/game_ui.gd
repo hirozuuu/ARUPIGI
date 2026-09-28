@@ -19,7 +19,7 @@ var flash: float = 0.0
 var fade: float = 0.0
 var battle_rect: Rect2
 var battle_boundary_visible := true
-var talk_name: String = ""
+var talk_available := false
 var dialogue_view: DialogueView
 
 func _ready() -> void:
@@ -70,9 +70,9 @@ func _draw() -> void:
 			text_at("Esc  旅のメニュー", Vector2(747, 54), 19)
 		if screen == "dialogue":
 			pass
-		elif not talk_name.is_empty():
+		elif talk_available:
 			panel(Rect2(215, 556, 530, 60))
-			centered("Enter  %s と話す" % talk_name, 594, 21, GOLD)
+			centered("Enter  話す", 594, 21, GOLD)
 		elif not notice.is_empty():
 			panel(Rect2(150, 536, 660, 66))
 			centered(notice, 578, 21)

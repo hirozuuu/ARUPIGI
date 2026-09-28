@@ -29,7 +29,7 @@ func _run() -> void:
 		ui.max_hp = 30
 		var model := DialogueModel.new()
 		assert(model.start(TOWN.npcs[0].dialogue, ui.font))
-		ui.dialogue_view.set_content(model, TOWN.npcs[0].display_name)
+		ui.dialogue_view.set_content(model)
 		ui.dialogue_view.visible = true
 		ui.queue_redraw()
 		await process_frame

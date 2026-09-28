@@ -412,7 +412,7 @@ func _start_preview(selected_only: bool) -> void:
 		preview_status.text = "開始不可: " + " / ".join(report.errors)
 		return
 	if preview_model.start(copied.dialogue, preview_view.font):
-		preview_view.set_content(preview_model, copied.display_name)
+		preview_view.set_content(preview_model)
 		preview_status.text = "プレビュー中。操作ボタンで進めてください。"
 
 func _preview_select(delta: int) -> void:

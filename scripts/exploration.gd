@@ -57,8 +57,8 @@ func enter(map_data: MapData, point: Vector2, config: GameConfig) -> void:
 		if npc_data == null:
 			push_warning("空のNPCを生成しません: " + map_data.id)
 			continue
-		if npc_data.id.strip_edges().is_empty() or accepted_ids.has(npc_data.id) or npc_data.texture == null or npc_data.display_name.strip_edges().is_empty():
-			push_warning("NPC %s を生成しません: ID・名前・画像が無効です。" % npc_data.id)
+		if npc_data.id.strip_edges().is_empty() or accepted_ids.has(npc_data.id) or npc_data.texture == null:
+			push_warning("NPC %s を生成しません: IDまたは画像が無効です。" % npc_data.id)
 			continue
 		var issue := MapValidator.npc_placement_issue(map_data, npc_data.cell, accepted)
 		if not issue.is_empty():

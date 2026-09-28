@@ -33,8 +33,6 @@ static func validate(map: MapData, registered_maps: Dictionary = {}, include_npc
 			if npc.id.strip_edges().is_empty() or seen_ids.has(npc.id):
 				errors.append("NPCのIDが空か重複しています: %s" % npc.id)
 			seen_ids[npc.id] = true
-			if npc.display_name.strip_edges().is_empty():
-				errors.append("NPC %s の名前が空です。" % npc.id)
 			if npc.texture == null:
 				errors.append("NPC %s の画像がありません。" % npc.id)
 			var dialogue_report := DialogueValidator.validate(npc.dialogue)

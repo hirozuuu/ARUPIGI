@@ -201,7 +201,7 @@ func _refresh_npc_listing() -> void:
 			npc_list.add_item("(欠落したNPC Resource) [%d]" % index)
 			npc_list.set_item_metadata(npc_list.item_count - 1, "__missing__%d" % index)
 			continue
-		npc_list.add_item("%s  %s  %s" % [npc.display_name, npc.id, str(npc.cell)])
+		npc_list.add_item("%s  %s" % [npc.id, str(npc.cell)])
 		npc_list.set_item_metadata(npc_list.item_count - 1, npc.id)
 		if npc.id == selected_npc_id:
 			npc_list.select(npc_list.item_count - 1)
@@ -224,7 +224,6 @@ func _new_npc() -> void:
 	flush_text()
 	var npc := NpcData.new()
 	npc.id = document.new_id("npc")
-	npc.display_name = "住人"
 	npc.texture = load("res://assets/art/npc.svg")
 	npc.dialogue = DialogueData.new()
 	var node := DialogueNodeData.new()

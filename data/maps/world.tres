@@ -1,52 +1,52 @@
 [gd_resource type="Resource" script_class="MapData" format=3 uid="uid://dp5bbf5fdx6ri"]
 
-[ext_resource type="Script" uid="uid://u563cmq6w3b0" path="res://scripts/data/enemy_data.gd" id="1_63011"]
-[ext_resource type="Resource" path="res://data/enemies/mossling.tres" id="2_8yqni"]
-[ext_resource type="Resource" path="res://data/enemies/pebble.tres" id="3_281i5"]
-[ext_resource type="Script" uid="uid://b4bbxo0h14g56" path="res://scripts/data/map_data.gd" id="4_llkh1"]
-[ext_resource type="Resource" path="res://data/terrains/plain.tres" id="5_265x4"]
-[ext_resource type="Resource" path="res://data/terrains/mountain.tres" id="6_2dgnp"]
-[ext_resource type="Resource" path="res://data/terrains/hill.tres" id="7_ibnm2"]
-[ext_resource type="Resource" path="res://data/terrains/sand.tres" id="8_g6dwu"]
-[ext_resource type="Resource" path="res://data/terrains/building.tres" id="9_06xfa"]
-[ext_resource type="Script" path="res://scripts/data/npc_data.gd" id="npc_script"]
-[ext_resource type="Script" path="res://scripts/data/dialogue_data.gd" id="dialogue_script"]
-[ext_resource type="Script" path="res://scripts/data/dialogue_node_data.gd" id="node_script"]
-[ext_resource type="Texture2D" path="res://assets/art/npc.svg" id="npc_texture"]
+[ext_resource type="Script" uid="uid://u563cmq6w3b0" path="res://scripts/data/enemy_data.gd" id="1_ll4or"]
+[ext_resource type="Resource" path="res://data/enemies/mossling.tres" id="2_xkdc5"]
+[ext_resource type="Resource" path="res://data/enemies/pebble.tres" id="3_fysl7"]
+[ext_resource type="Script" uid="uid://col0eoucadm6r" path="res://scripts/data/npc_data.gd" id="4_y4ygu"]
+[ext_resource type="Script" uid="uid://bw2pd14bk17nu" path="res://scripts/data/dialogue_node_data.gd" id="5_8a3q0"]
+[ext_resource type="Script" uid="uid://bn7riuo8gbkdu" path="res://scripts/data/dialogue_choice_data.gd" id="6_t2ibu"]
+[ext_resource type="Script" uid="uid://e3q330ebnp6d" path="res://scripts/data/dialogue_data.gd" id="7_csl3r"]
+[ext_resource type="Texture2D" uid="uid://c4ay1tkgjy2uy" path="res://assets/art/npc.svg" id="8_5t2u6"]
+[ext_resource type="Script" uid="uid://b4bbxo0h14g56" path="res://scripts/data/map_data.gd" id="9_rg6ul"]
+[ext_resource type="Resource" path="res://data/terrains/plain.tres" id="10_81vsi"]
+[ext_resource type="Resource" path="res://data/terrains/mountain.tres" id="11_inlae"]
+[ext_resource type="Resource" path="res://data/terrains/building.tres" id="12_h8icm"]
+[ext_resource type="Resource" path="res://data/terrains/hill.tres" id="13_n6wdv"]
+[ext_resource type="Resource" path="res://data/terrains/sand.tres" id="14_0jo4j"]
 
-[sub_resource type="Resource" id="world_npc_node"]
-script = ExtResource("node_script")
+[sub_resource type="Resource" id="Resource_yei6j"]
+script = ExtResource("5_8a3q0")
 id = "greeting"
 editor_label = "旅の案内"
-text = "こんにちは、旅人さん。ここは町と洞窟をつなぐ野原です。\n東の道には背の高い草が続き、夕暮れには風の音が変わります。\n町では花の泉で体を休められます。遠い道へ進む前に立ち寄ってみてください。\n洞窟へ行くなら、足元にも気をつけて。暗い場所では急がずに進みましょう。\n困ったときは、またここへ戻ってきてくださいね。"
+text = "かんがるー　きけん！"
 
-[sub_resource type="Resource" id="world_npc_dialogue"]
-script = ExtResource("dialogue_script")
+[sub_resource type="Resource" id="Resource_5v5pc"]
+script = ExtResource("7_csl3r")
 start_node_id = "greeting"
-nodes = Array[ExtResource("node_script")]([SubResource("world_npc_node")])
+nodes = Array[ExtResource("5_8a3q0")]([SubResource("Resource_yei6j")])
 
-[sub_resource type="Resource" id="world_npc"]
-script = ExtResource("npc_script")
+[sub_resource type="Resource" id="Resource_nqr4n"]
+script = ExtResource("4_y4ygu")
 id = "field_guide"
-display_name = "野原の案内人"
 cell = Vector2i(22, 17)
-texture = ExtResource("npc_texture")
+texture = ExtResource("8_5t2u6")
 tint = Color(0.85, 1, 0.88, 1)
-dialogue = SubResource("world_npc_dialogue")
+dialogue = SubResource("Resource_5v5pc")
 
 [resource]
-script = ExtResource("4_llkh1")
+script = ExtResource("9_rg6ul")
 id = "world"
 display_name = "はじまりの野原"
 width = 40
 height = 30
 rows = PackedStringArray("........................................", "...........................^^^^^^^......", ".....^^^^................^^^^^^^^^^.....", "...^^^^^^^..............^^^^hhhh^^^.....", "..^^^^h^^^..............^^hhhhhhh^^.....", "..^^hhh^^...............^hhhhhhhh^^.....", "...^hhh^.................hhhhhhhh^^.....", "...hhhhh..................hhhhhhh^^.....", "....hhhh.....................shhh^......", ".............................s..........", ".............................s..........", "........................................", "........................................", "........................................", "........................................", "........................................", "........................................", "......hhhhh.............................", ".....hhhhhhh..............ssssssss......", "....hhhhh^^^.............ssssssssss.....", "....hhhh^^^^............ssssssssssss....", ".....hhh^^^^............ssssssssssss....", ".....hhh^^^^.............ssssssssss.....", "......hh^^^^..............ssssssss......", ".......h^^^^......^^^^^....ssssss.......", "........^^^^....^^^^^^^^................", "...............^^^^^^^^^^...............", "...............^^^^^^.^^^...............", "...............^^^^^...^^...............", "...............^^^^.....^...............")
 terrains = {
-".": ExtResource("5_265x4"),
-"^": ExtResource("6_2dgnp"),
-"a": ExtResource("9_06xfa"),
-"h": ExtResource("7_ibnm2"),
-"s": ExtResource("8_g6dwu")
+".": ExtResource("10_81vsi"),
+"^": ExtResource("11_inlae"),
+"a": ExtResource("12_h8icm"),
+"h": ExtResource("13_n6wdv"),
+"s": ExtResource("14_0jo4j")
 }
 spawns = {
 "from_dungeon": Vector2i(29, 10),
@@ -63,5 +63,5 @@ portals = Array[Dictionary]([{
 "target_spawn": "entry"
 }])
 encounters_enabled = true
-enemies = Array[ExtResource("1_63011")]([ExtResource("2_8yqni"), ExtResource("3_281i5")])
-npcs = Array[ExtResource("npc_script")]([SubResource("world_npc")])
+enemies = Array[ExtResource("1_ll4or")]([ExtResource("2_xkdc5"), ExtResource("3_fysl7")])
+npcs = Array[ExtResource("4_y4ygu")]([SubResource("Resource_nqr4n")])

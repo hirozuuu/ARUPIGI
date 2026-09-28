@@ -9,7 +9,6 @@ const MUTED := Color("afb9ac")
 const CHOICE_ROWS := 7
 var font: Font = preload("res://assets/fonts/ui_font.tres")
 var model: DialogueModel
-var speaker: String = ""
 var choice_scroll: int = 0
 
 func _ready() -> void:
@@ -17,9 +16,8 @@ func _ready() -> void:
 	if custom_minimum_size == Vector2.ZERO:
 		custom_minimum_size = Vector2(480, 320)
 
-func set_content(value: DialogueModel, name: String) -> void:
+func set_content(value: DialogueModel) -> void:
 	model = value
-	speaker = name
 	choice_scroll = 0
 	queue_redraw()
 
@@ -61,18 +59,11 @@ func _draw() -> void:
 		return
 	draw_set_transform(Vector2.ZERO, 0, size / Vector2(960, 640))
 	_panel(Rect2(45, 395, 870, 195))
-	_panel(Rect2(56, 346, 370, 48))
-	var name := speaker
-	while name.length() > 1 and font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x > 334:
-		name = name.substr(0, name.length() - 2) + "…"
-	draw_string(font, Vector2(74, 378), name, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, GOLD)
 	var lines := model.pages[model.page_index].split("\n", true)
 	for i in mini(lines.size(), 2):
 		draw_string(font, Vector2(70, 448 + i * 43), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 23, PAPER)
-	var page_info := "%d / %d" % [model.page_index + 1, model.pages.size()]
-	draw_string(font, Vector2(70, 566), page_info, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, MUTED)
-	draw_string(font, Vector2(652, 566), "↑↓ 選択  Enter 決定" if model.choices_visible() else "Enter 次へ ▸", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, GOLD)
 	if model.choices_visible():
+		draw_string(font, Vector2(652, 566), "↑↓ 選択  Enter 決定", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, GOLD)
 		_draw_choices()
 
 func _draw_choices() -> void:

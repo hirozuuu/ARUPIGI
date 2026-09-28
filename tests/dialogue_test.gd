@@ -79,7 +79,7 @@ func _test_dialogue() -> void:
 	check(long_model.choice_index == long_model.current.choices.size() - 1, "Choice selection reaches final item without fixed count limit")
 	var view := DialogueView.new()
 	root.add_child(view)
-	view.set_content(long_model, "町の住人")
+	view.set_content(long_model)
 	view.sync_selection()
 	check(view.choice_scroll > 0, "Many choices scroll to selected item")
 	var scroll_before := view.choice_scroll
@@ -147,8 +147,8 @@ func _test_copy_and_save() -> void:
 	var broken := Document.copy_map(TOWN)
 	broken.npcs[0].cell = Vector2i(-1, -1)
 	check(not MapValidator.validate(broken).warnings.is_empty(), "Invalid placement warns")
-	broken.npcs[0].display_name = " "
-	check(not MapValidator.validate(broken).errors.is_empty(), "Blank display name blocks save")
+	broken.npcs[0].texture = null
+	check(not MapValidator.validate(broken).errors.is_empty(), "Missing NPC image blocks save")
 
 func _test_editor() -> void:
 	var panel := EditorPanel.new()
@@ -183,11 +183,12 @@ func _test_editor() -> void:
 	editor._preview_confirm()
 	editor._stop_preview()
 	check(Document.map_values(panel.document.data) == values, "Preview does not edit document")
-	panel.npc_detail.name_edit.text = "編集した住人"
-	panel.npc_detail.name_edit.text_changed.emit("編集した住人")
+	var edited_tint := Color(0.5, 0.7, 0.9)
+	panel.npc_detail.tint_edit.color = edited_tint
+	panel.npc_detail.tint_edit.color_changed.emit(edited_tint)
 	panel.npc_detail.texture_edit.text = "res://assets/art/player.svg"
 	check(panel.save_current(), "Editor saves NPC and dialogue")
-	check(panel.document.data.npcs[0].texture.resource_path == "res://assets/art/player.svg" and panel.document.data.npcs[0].display_name == "編集した住人", "Save flushes simultaneous NPC name and image edits")
+	check(panel.document.data.npcs[0].texture.resource_path == "res://assets/art/player.svg" and panel.document.data.npcs[0].tint == edited_tint, "Save flushes simultaneous NPC color and image edits")
 	_test_editor_repairs(panel)
 	panel.document.history.clear_history()
 	panel.queue_free()
@@ -252,7 +253,7 @@ func _test_game() -> void:
 	await physics_frame
 	game._refresh_ui()
 	check(game.exploration.npcs.size() == 1 and game.exploration.talk_target() != null, "Town NPC is spawned and targetable from adjacent cell")
-	check(game.ui.talk_name == "町の住人", "Prompt names the same talk target")
+	check(game.ui.talk_available, "Prompt appears for the same talk target")
 	var before_position: Vector2 = game.session.position
 	var before_distance: float = game.encounters.distance_remainder
 	game.confirm_armed = true

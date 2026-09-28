@@ -16,7 +16,7 @@
 
 開始地点から左上にある屋根の印が町です。町では北に進むと回復の泉、南の矢印を踏むと野原に戻れます。洞窟は開始地点の右上にある岩の印です。野原と洞窟では歩いた距離に応じて敵が出現します。戦闘中のEscは無効です。
 
-野原の案内人と町の住人に話しかけられます。相手の近くで向きを合わせると名前と「Enter 話す」の案内が出ます。会話中は移動と遭遇が止まり、本文は最大2行ずつ表示されます。選択肢は上下キーで選び、Enterで決定します。
+野原と町のNPCに話しかけられます。相手の近くで向きを合わせると「Enter 話す」の案内が出ます。会話中は移動と遭遇が止まり、本文は最大2行ずつ表示されます。NPC名・ページ数・通常会話中の次へ案内は表示されません。選択肢は上下キーで選び、Enterで決定します。
 
 戦闘はフィールドの上に重なり、主人公はコマンド選択中・途中メッセージ中・結果表示中も枠内を歩けます。敵と枠の線には足元の当たり判定で止まりますが、背景の地形は戦闘中の移動を妨げません。上／下は押したときに選択を1回切り替え、押し続けると移動だけを続けます。
 
@@ -100,4 +100,4 @@ $captureDirectory = Join-Path (Get-Location) 'build/packed-screenshots'
 
 Noto Sans JPの再配布ライセンスは `assets/fonts/OFL.txt`、独自SVGの説明は `assets/art/README.md` にあります。詳細は [初期実装計画](docs/implementation-plan.md)、[戦闘表示の実装計画](docs/battle-overlay-implementation-plan.md)、[検証記録](docs/verification.md) を参照してください。
 
-Godot上部の **マップ** から既存マップの地形とNPCを編集できます。NPCの名前・画像・色・本文・選択肢・分岐と、会話プレビューを扱えます。Undo／Redo、保存、素材追加、検証、未保存データの復旧に対応しています。[操作ガイド](docs/map-editor-guide.md)、[NPC会話の実装計画](docs/npc-dialogue-implementation-plan.md)、[検証記録](docs/map-editor-verification.md) を参照してください。
+Godot上部の **マップ** から既存マップの地形とNPCを編集できます。NPCの画像・色・本文・選択肢・分岐と、会話プレビューを扱えます。NPCは自動生成されるIDで一覧表示します。Undo／Redo、保存、素材追加、検証、未保存データの復旧に対応しています。[操作ガイド](docs/map-editor-guide.md)、[NPC会話の実装計画](docs/npc-dialogue-implementation-plan.md)、[検証記録](docs/map-editor-verification.md) を参照してください。

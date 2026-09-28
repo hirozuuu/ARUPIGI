@@ -127,7 +127,7 @@ func _begin_dialogue(target: Npc) -> void:
 		push_warning("NPC %s の会話を開始できません。" % target.data.id)
 		return
 	exploration.player.stop()
-	ui.dialogue_view.set_content(dialogue, target.data.display_name)
+	ui.dialogue_view.set_content(dialogue)
 	_set_state(State.DIALOGUE)
 
 func _set_state(next: State) -> void:
@@ -261,11 +261,11 @@ func _finish_battle() -> void:
 func _refresh_ui() -> void:
 	ui.screen = {State.EXPLORATION: "exploration", State.MENU: "menu", State.TRANSITION: "exploration", State.BATTLE: "battle", State.DIALOGUE: "dialogue"}[state]
 	ui.dialogue_view.visible = state == State.DIALOGUE
-	ui.talk_name = ""
+	ui.talk_available = false
 	if state == State.EXPLORATION:
 		var target := exploration.talk_target()
 		if target != null:
-			ui.talk_name = target.data.display_name
+			ui.talk_available = true
 	ui.hp = session.hp
 	ui.max_hp = session.max_hp
 	ui.map_name = MAPS[session.map_id].display_name if MAPS.has(session.map_id) else ""

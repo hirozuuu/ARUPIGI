@@ -54,7 +54,6 @@ nodes = Array[ExtResource("node_script")]([SubResource("town_node_start"), SubRe
 [sub_resource type="Resource" id="town_npc"]
 script = ExtResource("npc_script")
 id = "town_resident"
-display_name = "町の住人"
 cell = Vector2i(9, 11)
 texture = ExtResource("npc_texture")
 tint = Color(0.9, 0.86, 1, 1)
