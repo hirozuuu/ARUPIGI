@@ -63,7 +63,7 @@ func _ready() -> void:
 		canvas.finish_stroke()
 		canvas.npc_mode = index == 1
 		palette.visible = index == 0
-		npc_side.visible = index == 1
+		npc_scroll.visible = index == 1
 		_update_status()
 	)
 	top.add_child(edit_kind)
@@ -141,7 +141,7 @@ func _ready() -> void:
 	npc_detail = NpcPanel.new()
 	npc_side.add_child(npc_detail)
 	npc_detail.operation_failed.connect(_show_notice)
-	npc_side.visible = false
+	npc_scroll.visible = false
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(status)
 	messages.custom_minimum_size.y = 90

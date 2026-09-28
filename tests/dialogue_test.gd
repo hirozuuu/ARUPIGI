@@ -103,6 +103,18 @@ func _test_pagination() -> void:
 	var continuous := "漢".repeat(100)
 	var result := DialoguePaginator.paginate(continuous, font, 23, 100)
 	check("".join(result).replace("\n", "") == continuous, "Unbroken Japanese string remains complete")
+	for value in ["あい「う」。", "あいう、、え", "あいう「「えお"]:
+		var wrapped := DialoguePaginator.paginate(value, font, 23, 93)
+		check("".join(wrapped).replace("\n", "") == value, "Punctuation wrapping retains every character")
+		for line in "\n".join(wrapped).split("\n"):
+			check(font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, 23).x <= 93.5, "Punctuation wrapping fits width")
+			check(not DialoguePaginator.OPENING.contains(line.right(1)) and not DialoguePaginator.CLOSING.contains(line.left(1)), "Wrapping avoids opening brackets at line end and closing marks at line start")
+	var punctuation := "「「「、、、、、」」」"
+	var narrow_lines := DialoguePaginator.wrap_lines(punctuation, font, 23, 47)
+	check("".join(narrow_lines) == punctuation, "Unsatisfiable punctuation rules retain all characters")
+	for line in narrow_lines:
+		check(not line.is_empty() and font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, 23).x <= 47.5, "Unsatisfiable punctuation rules prefer bounded nonempty lines")
+	check(DialoguePaginator.paginate("", font, 23, 820) == [""], "Empty text retains one empty page")
 
 func _test_copy_and_save() -> void:
 	var copy := Document.copy_map(TOWN)
@@ -145,6 +157,9 @@ func _test_editor() -> void:
 	panel.clear_recovery()
 	root.add_child(panel)
 	await process_frame
+	check(not panel.npc_scroll.visible, "Terrain mode hides the entire NPC column")
+	panel.edit_kind.item_selected.emit(1)
+	check(panel.npc_scroll.visible, "NPC mode shows the NPC column")
 	check(panel._open_now(TEST_DIR.path_join("dialogue-saving.tres")), "Open NPC editor fixture")
 	panel._select_npc("town_resident")
 	check(panel.npc_detail.visible and panel.npc_list.item_count == 1, "NPC detail opens from list")
@@ -173,9 +188,41 @@ func _test_editor() -> void:
 	panel.npc_detail.texture_edit.text = "res://assets/art/player.svg"
 	check(panel.save_current(), "Editor saves NPC and dialogue")
 	check(panel.document.data.npcs[0].texture.resource_path == "res://assets/art/player.svg" and panel.document.data.npcs[0].display_name == "編集した住人", "Save flushes simultaneous NPC name and image edits")
+	_test_editor_repairs(panel)
 	panel.document.history.clear_history()
 	panel.queue_free()
 	await process_frame
+
+func _test_editor_repairs(panel: EditorPanel) -> void:
+	var npc := panel.document.data.npcs[0]
+	var editor = panel.npc_detail.dialogue_panel
+	var data := npc.dialogue
+	npc.dialogue = null
+	panel._select_npc(npc.id)
+	check(panel.npc_detail.reset_dialogue_button.visible and not editor.visible, "Missing dialogue shows repair action without stale editing controls")
+	panel.npc_detail._create_dialogue()
+	check(editor.visible and editor._selected_node() != null, "Creating missing dialogue restores usable editor")
+	panel.undo_current()
+	check(panel.document.data.npcs[0].dialogue == null and not editor.visible, "Undo of dialogue creation hides stale controls")
+	npc = panel.document.data.npcs[0]
+	npc.dialogue = data
+	data.nodes.append(null)
+	var unused := DialogueNodeData.new()
+	unused.id = "unused"
+	unused.text = "削除できる本文"
+	data.nodes.append(unused)
+	editor.node_id = unused.id
+	editor.refresh()
+	editor._delete_node()
+	check(not data.nodes.has(unused), "Unreferenced node can be deleted while another node Resource is missing")
+	panel.undo_current()
+	check(editor._npc().dialogue.nodes[-1].id == "unused", "Deletion in damaged dialogue remains undoable")
+	editor.node_id = "unused"
+	editor._selected_node().next_node_id = "missing_target"
+	editor.refresh()
+	check(editor.next_option.get_item_metadata(editor.next_option.selected) == "missing_target", "Missing destination is displayed instead of silently showing conversation end")
+	editor.next_option.item_selected.emit(0)
+	check(editor._selected_node().next_node_id.is_empty(), "Missing destination can be explicitly repaired to conversation end")
 
 func _game_key(code: Key, pressed: bool) -> void:
 	var event := InputEventKey.new()

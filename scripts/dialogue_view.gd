@@ -50,11 +50,7 @@ func scroll_choices(lines: int) -> void:
 	queue_redraw()
 
 func _choice_lines(value: String) -> Array[String]:
-	var result: Array[String] = []
-	for page in DialoguePaginator.paginate(value, font, 19, 304):
-		for line in page.split("\n"):
-			result.append(line)
-	return result
+	return DialoguePaginator.wrap_lines(value, font, 19, 304)
 
 func _panel(rect: Rect2) -> void:
 	draw_rect(rect, INK)

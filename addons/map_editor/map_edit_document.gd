@@ -187,22 +187,11 @@ func npc_at(cell: Vector2i) -> NpcData:
 	return null
 
 func placement_error(cell: Vector2i, except_id: String = "") -> String:
-	if not in_bounds(cell):
-		return "マップ範囲外です。"
-	if not data.is_walkable(cell):
-		return "通行不可の地形です。"
+	var occupied: Dictionary = {}
 	for npc in data.npcs:
-		if npc != null and npc.cell == cell and npc.id != except_id:
-			return "別のNPCがいます。"
-	for spawn in data.spawns.values():
-		if spawn is Vector2i and spawn == cell:
-			return "出現位置と重なります。"
-	for portal in data.portals:
-		if portal.get("cell") is Vector2i and portal.get("cell") == cell:
-			return "出入口と重なります。"
-	if data.healing_cells.has(cell):
-		return "回復地点と重なります。"
-	return ""
+		if npc != null and npc.id != except_id:
+			occupied[npc.cell] = true
+	return Validator.npc_placement_issue(data, cell, occupied)
 
 func new_id(prefix: String) -> String:
 	var used: Dictionary = {}

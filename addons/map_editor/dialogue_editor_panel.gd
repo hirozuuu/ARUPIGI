@@ -172,8 +172,8 @@ func refresh() -> void:
 		return
 	_busy = true
 	var npc := _npc()
-	visible = npc != null
-	if npc == null or npc.dialogue == null:
+	visible = npc != null and npc.dialogue != null
+	if not visible:
 		_busy = false
 		return
 	if _selected_node() == null and not node_id.begins_with("__missing__"):
@@ -233,6 +233,10 @@ func _fill_targets(option: OptionButton, value: String) -> void:
 			option.set_item_metadata(option.item_count - 1, node.id)
 			if node.id == value:
 				selected = option.item_count - 1
+	if not value.is_empty() and selected == 0:
+		option.add_item("(欠落した移動先) [%s]" % value)
+		selected = option.item_count - 1
+		option.set_item_metadata(selected, value)
 	option.select(selected)
 
 func _change(description: String, action: Callable) -> void:
@@ -265,7 +269,7 @@ func flush_text() -> void:
 	refresh()
 
 func _add_node() -> void:
-	if _npc() == null:
+	if _npc() == null or _npc().dialogue == null:
 		return
 	var new_id := _new_node_id()
 	_change("本文を追加", func():
@@ -311,7 +315,7 @@ func _delete_node() -> void:
 		operation_failed.emit("開始本文は削除できません。先に開始本文を変更してください。")
 		return
 	for source in dialogue.nodes:
-		if source == node:
+		if source == null or source == node:
 			continue
 		if source.next_node_id == node.id:
 			operation_failed.emit("本文 %s から参照されています。" % source.id)

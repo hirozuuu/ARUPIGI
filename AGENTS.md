@@ -31,10 +31,12 @@ $godotExe = 'C:/Program Files/Godot/Godot_v4.6.2-stable_win64_console.exe'
 | 変更内容 | 検証スクリプト |
 | --- | --- |
 | 進行・遭遇・戦闘ロジック | `tests/logic_test.gd` |
+| 会話の進行・分割・検証・編集・修復 | `tests/dialogue_test.gd` |
 | 状態遷移・移動・マップResource | `tests/integration_test.gd` |
 | マップ編集・保存・検証・パネル | `tests/map_editor_test.gd` |
 | プラグイン登録・保存フック・復旧 | `tests/map_editor_plugin_test.gd`（`--editor` が必要） |
 | ゲームの見た目 | `tests/render_smoke.gd`（GPU使用、`--headless` を付けない） |
+| 会話UIの画面サイズ別描画 | `tests/dialogue_render_test.gd`（GPU使用、`--headless` を付けない） |
 
 マップエディタのテストデータは `build/map-editor-tests/` に出力する。プラグイン検証は有効化状態や復旧を操作するため、編集中のGodotを保存して閉じた状態で実施する。既存の復旧データによる中止を、データ削除で回避しない。詳細と描画テストのコマンドは `docs/map-editor-verification.md` にある。
 
