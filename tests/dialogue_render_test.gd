@@ -24,9 +24,6 @@ func _run() -> void:
 		var ui := GameUI.new()
 		holder.add_child(ui)
 		ui.screen = "dialogue"
-		ui.map_name = TOWN.display_name
-		ui.hp = 30
-		ui.max_hp = 30
 		var model := DialogueModel.new()
 		assert(model.start(TOWN.npcs[0].dialogue, ui.font))
 		ui.dialogue_view.set_content(model)

@@ -210,10 +210,9 @@ func begin_battle(foe: EnemyData) -> void:
 	battle.setup(foe)
 	exploration.begin_battle(foe)
 	_set_state(State.BATTLE)
-	ui.enemy = foe
 	ui.selected = 0
 	ui.battle_phase = "command"
-	ui.battle_text = "%sが あらわれた！" % foe.display_name
+	ui.battle_text = "%s！" % foe.display_name
 	ui.flash = 0
 
 func _run_action() -> void:
@@ -268,7 +267,6 @@ func _refresh_ui() -> void:
 			ui.talk_available = true
 	ui.hp = session.hp
 	ui.max_hp = session.max_hp
-	ui.map_name = MAPS[session.map_id].display_name if MAPS.has(session.map_id) else ""
 	if state == State.BATTLE:
 		ui.battle_rect = exploration.arena.screen_rect()
 		ui.battle_boundary_visible = exploration.arena.boundary_enabled
