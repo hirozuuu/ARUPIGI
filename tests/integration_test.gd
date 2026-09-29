@@ -265,6 +265,8 @@ func _test_portals() -> void:
 	await _cross_portal("town", 0)
 	await _cross_portal("world", 1)
 	await _cross_portal("dungeon", 0)
+	await _cross_portal("world", 2)
+	await _cross_portal("forest", 0)
 
 
 func _test_healing() -> void:
@@ -283,6 +285,12 @@ func _test_healing() -> void:
 	game.exploration.player.position = _center(cell)
 	await _frames(1)
 	_check(game.session.hp == game.session.max_hp, "Leaving and reentering healing cell allows another heal")
+	cell = MAPS.forest.healing_cells[0]
+	await _place("forest", _center(cell + Vector2i.DOWN))
+	game.session.damage(10)
+	game.exploration.player.position = _center(cell)
+	await _frames(1)
+	_check(game.session.hp == game.session.max_hp, "Forest spring restores HP")
 
 
 func _test_town_encounters() -> void:

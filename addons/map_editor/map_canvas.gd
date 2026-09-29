@@ -22,7 +22,7 @@ func _ready() -> void:
 	focus_mode = Control.FOCUS_ALL
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	for kind in ["town", "dungeon", "exit", "heal"]:
+	for kind in ["town", "dungeon", "forest", "exit", "heal"]:
 		_markers[kind] = load("res://assets/art/%s_marker.svg" % kind)
 	get_window().focus_exited.connect(finish_stroke)
 	mouse_exited.connect(func():

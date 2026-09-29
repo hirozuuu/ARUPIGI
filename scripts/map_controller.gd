@@ -24,7 +24,7 @@ func load_map(map_data: MapData, size: int) -> void:
 				body.position = (Vector2(x, y) + Vector2.ONE * 0.5) * tile_size
 				body.add_child(collision)
 				add_child(body)
-	for kind in ["town", "dungeon", "exit", "heal"]:
+	for kind in ["town", "dungeon", "forest", "exit", "heal"]:
 		markers[kind] = load("res://assets/art/%s_marker.svg" % kind)
 	queue_redraw()
 

@@ -9,6 +9,7 @@ const MAPS := {
 	"world": preload("res://data/maps/world.tres"),
 	"town": preload("res://data/maps/town.tres"),
 	"dungeon": preload("res://data/maps/dungeon.tres"),
+	"forest": preload("res://data/maps/forest.tres"),
 }
 var checks: int = 0
 var failures: int = 0
@@ -214,11 +215,15 @@ func _test_panel() -> void:
 	panel.clear_recovery()
 	root.add_child(panel)
 	await process_frame
-	check(panel.palette.item_count == 7, "Panel scans seven existing terrain resources")
+	check(panel.palette.item_count == 10, "Panel scans ten terrain resources including forest tiles")
 	check(panel.canvas.base_terrain.id == "plain", "World default erase base is plain")
 	for map_path in EditorPanel.MAP_PATHS:
 		check(panel._open_now(map_path), "Panel opens shipped map " + map_path)
 		check(panel.canvas.custom_minimum_size == Vector2(panel.document.data.width, panel.document.data.height) * panel.canvas.tile_size, "Canvas follows map extent")
+		if panel.document.data.id == "dungeon":
+			check(panel.canvas.base_terrain.id == "floor", "Dungeon default erase base is floor")
+		if panel.document.data.id == "forest":
+			check(panel.canvas.base_terrain.id == "forest_ground", "Forest default erase base is forest ground")
 		await _capture(panel.document.data.id)
 		if panel.document.data.id == "town":
 			panel.edit_kind.select(1)
@@ -233,7 +238,6 @@ func _test_panel() -> void:
 			panel.npc_scroll.scroll_vertical = 0
 			panel.edit_kind.select(0)
 			panel.edit_kind.item_selected.emit(0)
-	check(panel.canvas.base_terrain.id == "floor", "Dungeon default erase base is floor")
 	panel._open_now(fixture("panel", MAPS.town))
 	await process_frame
 	for zoom in [0.5, 0.75, 1.0, 1.5, 2.0]:
@@ -262,7 +266,7 @@ func _test_panel() -> void:
 
 func _test_palette(panel: EditorPanel) -> void:
 	panel._open_now(TEST_DIR.path_join("warning.tres"))
-	check(panel.palette.item_count == 8, "Map-referenced terrain outside standard folder appears in palette")
+	check(panel.palette.item_count == 11, "Map-referenced terrain outside standard folder appears in palette")
 	panel.terrain_directory = TEST_DIR.path_join("palette")
 	DirAccess.make_dir_recursive_absolute(panel.terrain_directory.path_join("nested"))
 	var extra := TerrainData.new()

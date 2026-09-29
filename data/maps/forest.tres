@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="MapData" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/map_data.gd" id="map_script"]
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="enemy_script"]
+[ext_resource type="Resource" path="res://data/terrains/forest_trees.tres" id="trees"]
+[ext_resource type="Resource" path="res://data/terrains/forest_ground.tres" id="ground"]
+[ext_resource type="Resource" path="res://data/terrains/forest_path.tres" id="path"]
+[ext_resource type="Resource" path="res://data/enemies/mossling.tres" id="mossling"]
+[ext_resource type="Resource" path="res://data/enemies/pebble.tres" id="pebble"]
+
+[resource]
+script = ExtResource("map_script")
+id = "forest"
+display_name = "こもれびの森"
+width = 26
+height = 20
+rows = PackedStringArray("TTTTTTTTTTTTTTTTTTTTTTTTTT",
+"TTTTTTTTTTTTTTTTTTTTTTTTTT",
+"TTTT.....TTTTTTTT.....TTTT",
+"TTT.......TTTTTT..ppp..TTT",
+"TTT..ppp..TTTTTT..ppp..TTT",
+"TTT..ppp..TTTTTT.......TTT",
+"TTT.......TTpppp.......TTT",
+"TTT...........pppppppTTTTT",
+"TTTTTpppp......TTTpppTTTTT",
+"TTTTTpppT......TTTpppTTTTT",
+"TTTTTpppT......pp.....TTTT",
+"TTTT....p......p.......TTT",
+"TTT............T.......TTT",
+"TTT......pTTTTTT.......TTT",
+"TTT......pp............TTT",
+"TTT......p.............TTT",
+"TTT......T......TTTTTTTTTT",
+"TTTTTTTTTT.ppp..TTTTTTTTTT",
+"TTTTTTTTTT.ppp..TTTTTTTTTT",
+"TTTTTTTTTTTTTTTTTTTTTTTTTT")
+terrains = {"T": ExtResource("trees"), ".": ExtResource("ground"), "p": ExtResource("path")}
+spawns = {"entry": Vector2i(12, 16)}
+portals = Array[Dictionary]([{"cell": Vector2i(12, 18), "target_map": "world", "target_spawn": "from_forest"}])
+healing_cells = Array[Vector2i]([Vector2i(19, 4)])
+encounters_enabled = true
+enemies = Array[ExtResource("enemy_script")]([ExtResource("mossling"), ExtResource("pebble")])

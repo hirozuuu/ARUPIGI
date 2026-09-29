@@ -50,6 +50,7 @@ terrains = {
 }
 spawns = {
 "from_dungeon": Vector2i(29, 10),
+"from_forest": Vector2i(11, 16),
 "from_town": Vector2i(17, 15),
 "start": Vector2i(20, 15)
 }
@@ -60,6 +61,10 @@ portals = Array[Dictionary]([{
 }, {
 "cell": Vector2i(29, 8),
 "target_map": "dungeon",
+"target_spawn": "entry"
+}, {
+"cell": Vector2i(11, 15),
+"target_map": "forest",
 "target_spawn": "entry"
 }])
 encounters_enabled = true

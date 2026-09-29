@@ -9,7 +9,7 @@ const NpcPanel = preload("res://addons/map_editor/npc_editor_panel.gd")
 var recovery_map_path: String = "user://map_editor_recovery.tres"
 var recovery_info_path: String = "user://map_editor_recovery.cfg"
 var terrain_directory: String = "res://data/terrains"
-const MAP_PATHS := ["res://data/maps/world.tres", "res://data/maps/town.tres", "res://data/maps/dungeon.tres"]
+const MAP_PATHS := ["res://data/maps/world.tres", "res://data/maps/town.tres", "res://data/maps/dungeon.tres", "res://data/maps/forest.tres"]
 var document := Document.new()
 var canvas: Canvas
 var maps := OptionButton.new()
@@ -469,7 +469,11 @@ func refresh_palette() -> void:
 		if canvas.brush == null or Document.same_terrain(terrain, previous_brush):
 			canvas.brush = terrain
 			palette.select(index)
-		var preferred := "floor" if document.data != null and document.data.id == "dungeon" else "plain"
+		var preferred := "plain"
+		if document.data != null:
+			match document.data.id:
+				"dungeon": preferred = "floor"
+				"forest": preferred = "forest_ground"
 		if Document.same_terrain(terrain, previous_base) or (previous_base == null and (canvas.base_terrain == null and terrain.walkable or terrain.id == preferred)):
 			canvas.base_terrain = terrain
 			base.select(index)

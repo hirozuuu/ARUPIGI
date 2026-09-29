@@ -67,7 +67,7 @@ static func validate(map: MapData, registered_maps: Dictionary = {}, include_npc
 		base_id = str(spawn_ids[0])
 	if map.id == "world":
 		base_id = "start"
-	elif map.id in ["town", "dungeon"]:
+	elif map.id in ["town", "dungeon", "forest"]:
 		base_id = "entry"
 	var base = map.spawns.get(base_id)
 	var visited: Dictionary = {}

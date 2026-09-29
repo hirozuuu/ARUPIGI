@@ -104,6 +104,19 @@ func _run() -> void:
 	await _capture("world_dialogue_last")
 	game._set_state(game.State.EXPLORATION)
 	game._refresh_ui()
+	game._begin_transition("forest", game.MAPS.forest.spawn_position("entry", game.CONFIG.tile_size))
+	await create_timer(0.6).timeout
+	game.ui.notice = ""
+	await _capture("forest")
+	var forest_spring: Vector2i = game.MAPS.forest.healing_cells[0]
+	game.exploration.player.position = (Vector2(forest_spring) + Vector2(0.5, 0.5)) * game.CONFIG.tile_size
+	game.session.position = game.exploration.player.position
+	await _frames(2)
+	await _capture("forest_spring")
+	game._begin_transition("world", game.MAPS.world.spawn_position("from_forest", game.CONFIG.tile_size))
+	await create_timer(0.6).timeout
+	game.ui.notice = ""
+	await _capture("world_forest_entrance")
 	game._begin_transition("dungeon", game.MAPS.dungeon.spawn_position("entry", game.CONFIG.tile_size))
 	await create_timer(0.6).timeout
 	await _capture("dungeon_before")
@@ -117,7 +130,7 @@ func _run() -> void:
 	await _capture("tall_battle")
 	game.queue_free()
 	await process_frame
-	print("PASS: 25 Compatibility renderer screenshots and held-key battle input saved under %s." % output_dir)
+	print("PASS: 28 Compatibility renderer screenshots and held-key battle input saved under %s." % output_dir)
 	quit()
 
 func _key(code: Key, pressed: bool, echo: bool = false) -> void:

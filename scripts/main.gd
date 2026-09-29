@@ -6,6 +6,7 @@ const MAPS := {
 	"world": preload("res://data/maps/world.tres"),
 	"town": preload("res://data/maps/town.tres"),
 	"dungeon": preload("res://data/maps/dungeon.tres"),
+	"forest": preload("res://data/maps/forest.tres"),
 }
 var state: State = State.EXPLORATION
 var session := GameSession.new()
@@ -40,7 +41,7 @@ func _ready() -> void:
 	session.reset(CONFIG, MAPS.world.spawn_position("start", CONFIG.tile_size))
 	encounters.reset(CONFIG)
 	exploration.enter(MAPS[session.map_id], session.position, CONFIG)
-	ui.notice = "旅のはじまり。屋根の印は町、岩の印は洞窟。"
+	ui.notice = "旅のはじまり。屋根は町、岩は洞窟、木立は森の印。"
 	notice_remaining = 5.0
 	_refresh_ui()
 
