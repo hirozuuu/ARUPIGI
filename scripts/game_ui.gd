@@ -9,6 +9,9 @@ var font: Font = preload("res://assets/fonts/ui_font.tres")
 var screen: String = "exploration"
 var hp: int = 30
 var max_hp: int = 30
+var level: int = 1
+var experience: int = 0
+var next_level_experience: int = 10
 var selected: int = 0
 var notice: String = ""
 var battle_text: String = ""
@@ -61,12 +64,15 @@ func _draw() -> void:
 		_draw_battle()
 	elif screen == "menu":
 		draw_rect(Rect2(0, 0, 960, 640), Color(0.035, 0.06, 0.07, 0.76))
-		panel(Rect2(280, 190, 400, 260))
-		text_at("旅のメニュー", Vector2(320, 250), 30)
-		text_at("HP  %02d / %02d" % [hp, max_hp], Vector2(320, 306), 24, GOLD)
-		draw_line(Vector2(320, 332), Vector2(640, 332), MUTED, 1)
-		option("ゲームに戻る", 330, 390, 0)
+		panel(Rect2(260, 154, 440, 332))
+		text_at("旅のメニュー", Vector2(300, 210), 30)
+		text_at("HP  %02d / %02d" % [hp, max_hp], Vector2(300, 258), 24, GOLD)
+		text_at("Lv. %d" % level, Vector2(300, 298), 24, GOLD)
+		text_at(_experience_text(), Vector2(300, 332), 22)
+		draw_line(Vector2(300, 358), Vector2(660, 358), MUTED, 1)
+		option("ゲームに戻る", 310, 420, 0)
 	elif screen == "exploration":
+		_draw_status()
 		if talk_available:
 			panel(Rect2(215, 556, 530, 60))
 			centered("Enter  話す", 594, 21, GOLD)
@@ -75,6 +81,19 @@ func _draw() -> void:
 			centered(notice, 578, 21)
 	if fade > 0:
 		draw_rect(Rect2(0, 0, 960, 640), Color(0.035, 0.05, 0.065, fade))
+
+func _experience_text() -> String:
+	if next_level_experience == 0:
+		return "EXP %d（MAX）" % experience
+	return "EXP %d / %d" % [experience, next_level_experience]
+
+
+func _draw_status() -> void:
+	panel(Rect2(28, 24, 236, 118))
+	text_at("HP  %02d / %02d" % [hp, max_hp], Vector2(45, 60), 22, GOLD)
+	text_at("Lv. %d" % level, Vector2(45, 89), 20, GOLD)
+	text_at(_experience_text(), Vector2(45, 118), 18)
+
 
 func _draw_battle() -> void:
 	var r := battle_rect
@@ -85,8 +104,7 @@ func _draw_battle() -> void:
 	draw_rect(Rect2(r.end.x, r.position.y, maxf(0.0, size.x - r.end.x), r.size.y), shade)
 	if battle_boundary_visible:
 		draw_rect(r, PAPER, false, 3.0)
-	panel(Rect2(28, 24, 200, 75))
-	text_at("HP  %02d / %02d" % [hp, max_hp], Vector2(45, 71), 22, GOLD)
+	_draw_status()
 	if battle_phase == "command":
 		panel(Rect2(28, 440, 272, 130))
 		option("こうげき", 55, 492, 0)

@@ -6,6 +6,9 @@
 script = ExtResource("1")
 tile_size = 48
 move_speed = 192.0
+escape_experience = 10
+level_experience = PackedInt32Array(0, 10, 30, 60, 100, 150, 210, 280, 360, 450)
+level_speed_multipliers = PackedFloat32Array(1, 1.15, 1.35, 1.65, 2.1, 2.8, 4, 6, 9, 16)
 max_hp = 30
 attack_min = 5
 attack_max = 8

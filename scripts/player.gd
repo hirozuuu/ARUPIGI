@@ -28,7 +28,8 @@ func move_player(direction: Vector2, speed: float, delta: float) -> float:
 		facing = direction.normalized()
 	velocity = direction.limit_length(1.0) * speed
 	move_and_slide()
-	z_index = roundi(position.y)
+	# 高レベルで戦闘枠外を走り続けても、描画順がGodotの許容範囲を超えない。
+	z_index = clampi(roundi(position.y), RenderingServer.CANVAS_ITEM_Z_MIN, RenderingServer.CANVAS_ITEM_Z_MAX)
 	var distance := before.distance_to(position)
 	if distance > 0.01:
 		walk_time += delta * 12.0

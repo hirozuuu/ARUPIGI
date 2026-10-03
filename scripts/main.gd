@@ -160,7 +160,7 @@ func _physics_process(delta: float) -> void:
 				ui.fade = 0.0
 				_set_state(State.EXPLORATION)
 		State.EXPLORATION:
-			var distance := exploration.step(delta, CONFIG)
+			var distance := exploration.step(delta, session.move_speed(CONFIG))
 			session.position = exploration.player.position
 			var portal := exploration.map.trigger_at(session.position)
 			if not portal.is_empty():
@@ -181,7 +181,7 @@ func _physics_process(delta: float) -> void:
 		State.DIALOGUE:
 			exploration.player.stop()
 		State.BATTLE:
-			exploration.step(delta, CONFIG)
+			exploration.step(delta, session.move_speed(CONFIG))
 			session.position = exploration.player.position
 			ui.flash = maxf(0.0, ui.flash - delta)
 			exploration.arena.enemy_art.modulate = Color(1.0, 0.6, 0.5) if ui.flash > 0.0 else Color.WHITE
@@ -238,7 +238,7 @@ func _resolve_escape(escaped: bool) -> void:
 		exploration.arena.return_player_inside(exploration.player)
 		session.position = exploration.player.position
 	exploration.arena.set_boundary_enabled(true)
-	messages = battle.resolve_escape(session, escaped)
+	messages = battle.resolve_escape(session, escaped, CONFIG)
 	ui.battle_phase = "command" if battle.outcome == BattleModel.Outcome.ONGOING else "result"
 	ui.battle_text = "\n".join(messages) if ui.battle_phase == "command" else messages[-1]
 	confirm_armed = false
@@ -268,6 +268,9 @@ func _refresh_ui() -> void:
 			ui.talk_available = true
 	ui.hp = session.hp
 	ui.max_hp = session.max_hp
+	ui.level = session.level
+	ui.experience = session.experience
+	ui.next_level_experience = session.next_level_experience(CONFIG)
 	if state == State.BATTLE:
 		ui.battle_rect = exploration.arena.screen_rect()
 		ui.battle_boundary_visible = exploration.arena.boundary_enabled

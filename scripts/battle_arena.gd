@@ -51,7 +51,7 @@ func begin(foe: EnemyData) -> void:
 	_set_wall(2, Vector2(world_rect.get_center().x, world_rect.position.y - t * 0.5), Vector2(world_rect.size.x + 2.0 * t, t))
 	_set_wall(3, Vector2(world_rect.get_center().x, world_rect.end.y + t * 0.5), Vector2(world_rect.size.x + 2.0 * t, t))
 	enemy_body.position = enemy_rect.get_center()
-	enemy_body.z_index = roundi(enemy_body.position.y)
+	enemy_body.z_index = clampi(roundi(enemy_body.position.y), RenderingServer.CANVAS_ITEM_Z_MIN, RenderingServer.CANVAS_ITEM_Z_MAX)
 	(enemy_body.get_child(0) as CollisionShape2D).shape.size = enemy_rect.size
 	enemy_art.texture = foe.texture
 	var texture_size := enemy_art.texture.get_size()

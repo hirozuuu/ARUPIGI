@@ -71,10 +71,10 @@ func enter(map_data: MapData, point: Vector2, config: GameConfig) -> void:
 		npc.setup(npc_data, config.tile_size)
 		npcs.append(npc)
 
-func step(delta: float, config: GameConfig) -> float:
+func step(delta: float, move_speed: float) -> float:
 	_release_overlap_exceptions()
 	var direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	var distance := player.move_player(direction, config.move_speed, delta)
+	var distance := player.move_player(direction, move_speed, delta)
 	if not arena.active and distance > 0.01 and camera_return_progress < 1.0:
 		# 実際に歩いた距離だけ進め、停止中や壁にぶつかった間は画面を動かさない。
 		camera_return_progress = minf(1.0, camera_return_progress + distance / camera_return_distance)

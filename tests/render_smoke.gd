@@ -33,10 +33,10 @@ func _run() -> void:
 	game.ui.selected = 0
 	game._run_action()
 	await _capture("battle_action")
-	game.battle.outcome = BattleModel.Outcome.VICTORY
-	game.battle.enemy_hp = 0
+	game.battle.enemy_hp = 1
+	var victory_messages: Array[String] = game.battle.attack(game.session, game.CONFIG)
 	game.ui.battle_phase = "result"
-	game.ui.battle_text = "敵を たおした！"
+	game.ui.battle_text = victory_messages[-1]
 	game.exploration.arena.set_enemy_active(false)
 	game._refresh_ui()
 	await _capture("victory_result")
@@ -53,6 +53,22 @@ func _run() -> void:
 	assert(game.battle.outcome == BattleModel.Outcome.ESCAPED and game.ui.battle_phase == "result")
 	game._refresh_ui()
 	await _capture("escape_result")
+	assert(game.session.level == 2 and game.ui.battle_text.contains("レベル 2"))
+	root.size = Vector2i(720, 480)
+	await _capture("small_level_up")
+	root.size = Vector2i(1200, 700)
+	await _capture("wide_level_up")
+	root.size = Vector2i(720, 900)
+	await _capture("tall_level_up")
+	root.size = Vector2i(960, 640)
+	game._finish_battle()
+	game.begin_battle(game.MAPS.world.enemies[0])
+	game.ui.selected = 1
+	game._run_action()
+	game.exploration.player.position.x = arena.world_rect.end.x + 40.0
+	await _frames(2)
+	assert(game.session.level == 2 and game.session.experience == 20 and not game.ui.battle_text.contains("アップ"))
+	await _capture("escape_no_level_up")
 	game._finish_battle()
 	game.begin_battle(game.MAPS.world.enemies[0])
 	game.exploration.player.position = arena.world_rect.get_center() + Vector2(0.0, 100.0)
@@ -128,9 +144,24 @@ func _run() -> void:
 	await _capture("wide_battle")
 	root.size = Vector2i(720, 900)
 	await _capture("tall_battle")
+	root.size = Vector2i(960, 640)
+	game.battle.outcome = BattleModel.Outcome.VICTORY
+	game._finish_battle()
+	game.session.gain_experience(430, game.CONFIG)
+	await _capture("level_max_field")
+	game._set_state(game.State.MENU)
+	await _capture("level_max_menu")
+	game._set_state(game.State.EXPLORATION)
+	game.begin_battle(game.MAPS.dungeon.enemies[0])
+	game.ui.selected = 1
+	game._run_action()
+	game.exploration.player.position.x = arena.world_rect.end.x + 40.0
+	await _frames(2)
+	assert(game.session.level == 10 and game.session.experience == 460)
+	await _capture("level_max_escape")
 	game.queue_free()
 	await process_frame
-	print("PASS: 28 Compatibility renderer screenshots and held-key battle input saved under %s." % output_dir)
+	print("PASS: 35 Compatibility renderer screenshots and held-key battle input saved under %s." % output_dir)
 	quit()
 
 func _key(code: Key, pressed: bool, echo: bool = false) -> void:

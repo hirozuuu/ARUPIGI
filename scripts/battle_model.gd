@@ -29,19 +29,24 @@ func attack(session: GameSession, config: GameConfig) -> Array[String]:
 	messages.append("あなたの こうげき！\n%sに %d のダメージ。" % [enemy.display_name, damage])
 	if enemy_hp == 0:
 		outcome = Outcome.VICTORY
-		messages.append("%sを たおした！" % enemy.display_name)
+		messages.append("%sを たおした！\n経験値 0" % enemy.display_name)
 	else:
 		_retaliate(session, messages)
 	return messages
 
 
-func resolve_escape(session: GameSession, escaped: bool) -> Array[String]:
+func resolve_escape(session: GameSession, escaped: bool, config: GameConfig) -> Array[String]:
 	var messages: Array[String] = []
 	if outcome != Outcome.ONGOING or enemy == null:
 		return messages
 	if escaped:
 		outcome = Outcome.ESCAPED
-		messages.append("うまく にげきれた！")
+		var gained := maxi(0, config.escape_experience)
+		var levels_gained := session.gain_experience(gained, config)
+		var result := "うまく にげきれた！\n経験値 +%d" % gained
+		if levels_gained > 0:
+			result += "\nレベル %d にアップ！ 移動速度が上がった！" % session.level
+		messages.append(result)
 	else:
 		messages.append("にげられなかった！")
 		_retaliate(session, messages)

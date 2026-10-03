@@ -44,6 +44,7 @@ func _run() -> void:
 	await _test_camera_return()
 	await _test_battles()
 	await _test_escape_movement()
+	await _test_levels()
 	await _test_restart()
 	config.encounter_chance = original_chance
 	config.escape_seconds = original_escape
@@ -544,6 +545,7 @@ func _test_battles() -> void:
 	_key(KEY_ENTER, true)
 	await _frames(1)
 	_check(game.ui.battle_phase == "busy" and game.battle.outcome == BattleModel.Outcome.VICTORY, "Attack begins message sequencing and resolves victory")
+	_check(game.session.experience == 0 and game.messages[-1].contains("経験値 0"), "Actual lethal attack earns zero EXP and includes it in the result")
 	_check(game.exploration.arena.enemy_art.visible and game.exploration.arena.enemy_body.collision_layer == BattleArena.BATTLE_LAYER, "Lethal attack keeps enemy art and collision during messages")
 	_key(KEY_ENTER, true, true)
 	await _frames(1)
@@ -605,6 +607,7 @@ func _test_battles() -> void:
 	await _tap(KEY_ENTER)
 	await _wait_state(MainScript.State.EXPLORATION)
 	_check(game.session.map_id == "town" and game.session.position == MAPS.town.spawn_position("recovery", config.tile_size) and game.session.hp == config.max_hp, "Defeat returns to safe town recovery spawn at full HP")
+	_check(game.session.experience == config.escape_experience and game.session.level == 2, "Map change and defeat recovery retain escape progression")
 	_check(not game.exploration.arena.active and game.exploration.player.collision_mask == 1 and game.exploration.camera.get_parent() == game.exploration.player, "Defeat restores terrain collision and following camera")
 
 
@@ -643,10 +646,11 @@ func _test_escape_movement() -> void:
 		_key(code, false)
 		_check(game.battle.outcome == BattleModel.Outcome.ESCAPED and game.ui.battle_phase == "result" and not arena.contains_player_art(player), "Walking the complete animated sprite past any edge succeeds")
 		_check(game.session.hp == hp_before and game.ui.battle_boundary_visible and arena.boundary_enabled, "Successful escape preserves HP and closes the temporary opening")
-		var escaped_position := player.position
 		await _frames(1) # 結果切替後に決定キーが離れているフレームを挟む。
+		# 復活した壁との接触を解消した後の、結果を閉じる時点の位置を引き継ぐ。
+		var escaped_position := player.position
 		await _tap(KEY_ENTER)
-		_check(game.state == MainScript.State.EXPLORATION and game.session.position == escaped_position and player.collision_mask == 1 and not arena.active, "Escape result restores exploration at the actual outside position")
+		_check(game.state == MainScript.State.EXPLORATION and game.session.position == escaped_position and player.collision_mask == 1 and not arena.active, "Escape result restores exploration at the actual outside position: direction=%s state=%s position=%s expected=%s" % [direction, game.state, game.session.position, escaped_position])
 		await _place("world", MAPS.world.spawn_position("start", config.tile_size))
 	# 時間切れでは四辺のまたぎを解消し、その後の移動を壁が止める。
 	for direction: Vector2 in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]:
@@ -688,6 +692,116 @@ func _test_escape_movement() -> void:
 	config.escape_seconds = 0.08
 
 
+func _test_levels() -> void:
+	game.session.reset(config, MAPS.world.spawn_position("start", config.tile_size))
+	var start := _center(Vector2i(7, 7))
+	await _place("town", start)
+	var player: Player = game.exploration.player
+	var arena: BattleArena = game.exploration.arena
+	_key(KEY_D, true)
+	await _frames(20)
+	_key(KEY_D, false)
+	var base_distance := player.position.x - start.x
+	await _place("town", start)
+	game.begin_battle(MAPS.world.enemies[0])
+	game.ui.selected = 1
+	game._run_action()
+	player.position.x = arena.world_rect.end.x + 40.0
+	await _frames(1)
+	_check(game.battle.outcome == BattleModel.Outcome.ESCAPED and game.session.level == 2 and game.session.experience == 10, "Actual escape immediately levels the player during the battle result")
+	_check(game.ui.level == 2 and game.ui.experience == 10 and game.ui.next_level_experience == 30 and game.ui.battle_text.contains("レベル 2"), "Battle HUD and result report the new level and EXP")
+	var result_start := player.position
+	_key(KEY_D, true)
+	await _frames(20)
+	_key(KEY_D, false)
+	_check(absf(player.position.x - result_start.x - base_distance * 1.15) < 4.0, "The level increase speeds up movement before closing the escape result")
+	game._finish_battle()
+	await _place("town", start)
+	_key(KEY_D, true)
+	await _frames(20)
+	_key(KEY_D, false)
+	_check(absf(player.position.x - start.x - base_distance * 1.15) < 4.0, "Exploration uses the same increased speed after returning and changing maps")
+	await _tap(KEY_ESCAPE)
+	_check(game.state == MainScript.State.MENU and game.ui.level == 2 and game.ui.experience == 10, "Menu displays current progression")
+	await _tap(KEY_ESCAPE)
+	game.session.gain_experience(440, config)
+	await _place("town", start)
+	_key(KEY_D, true)
+	await _frames(6)
+	_key(KEY_D, false)
+	_check(player.position.x - start.x > 250.0 and player.position.x - start.x < 370.0 and game.ui.level == 10 and game.ui.next_level_experience == 0, "Level ten crosses more than five field tiles in a tenth of a second and shows MAX")
+	await _place("town", start)
+	game.begin_battle(MAPS.world.enemies[0])
+	for phase in ["command", "busy", "result"]:
+		player.position = arena.world_rect.get_center() + Vector2(0.0, 100.0)
+		game.ui.battle_phase = phase
+		game.messages.assign(["速度の検証"])
+		game.message_index = 0
+		game.message_remaining = 1.0
+		var before := player.position
+		_key(KEY_D, true)
+		await _frames(1)
+		_key(KEY_D, false)
+		_check(player.position.x - before.x > 45.0 and player.position.x - before.x < 60.0, "Level ten battle movement remains fast during %s" % phase)
+	game.ui.battle_phase = "command"
+	for direction: Vector2 in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]:
+		var r := arena.world_rect
+		var edge := r.get_center() + direction * r.size * 0.5
+		if direction.y != 0.0:
+			edge.x += 110.0
+		player.position = edge - direction * 30.0
+		var code: Key = KEY_A if direction.x < 0 else KEY_D if direction.x > 0 else KEY_W if direction.y < 0 else KEY_S
+		_key(code, true)
+		await _frames(3)
+		_key(code, false)
+		_check(r.grow(0.1).has_point(player.position) and player.position.distance_to(edge) >= 8.5, "Level ten cannot tunnel through an arena wall")
+	player.position = Vector2(arena.enemy_rect.position.x - 30.0, arena.enemy_rect.get_center().y)
+	_key(KEY_D, true)
+	await _frames(3)
+	_key(KEY_D, false)
+	_check(player.position.x <= arena.enemy_rect.position.x - 8.5, "Level ten cannot tunnel through the enemy")
+	config.escape_seconds = 1.3
+	player.position = Vector2(arena.world_rect.end.x - 60.0, arena.world_rect.get_center().y)
+	game.ui.selected = 1
+	game._run_action()
+	_key(KEY_D, true)
+	await _frames(3)
+	_key(KEY_D, false)
+	_check(game.battle.outcome == BattleModel.Outcome.ESCAPED and game.session.level == 10 and game.session.experience == 460, "Level ten can physically escape and still earns EXP without exceeding the cap")
+	_check(game.ui.battle_text.contains("経験値 +10") and not game.ui.battle_text.contains("アップ"), "Maximum level result displays earned EXP without another level increase")
+	var escaped_position := player.position
+	player.position.y = float(RenderingServer.CANVAS_ITEM_Z_MAX) - 20.0
+	_key(KEY_S, true)
+	await _frames(2)
+	_key(KEY_S, false)
+	_check(player.position.y > RenderingServer.CANVAS_ITEM_Z_MAX and player.z_index == RenderingServer.CANVAS_ITEM_Z_MAX, "Fast movement far outside the arena safely clamps the upper draw order")
+	player.position.y = float(RenderingServer.CANVAS_ITEM_Z_MIN) + 20.0
+	_key(KEY_W, true)
+	await _frames(2)
+	_key(KEY_W, false)
+	_check(player.position.y < RenderingServer.CANVAS_ITEM_Z_MIN and player.z_index == RenderingServer.CANVAS_ITEM_Z_MIN, "Fast movement far outside the arena safely clamps the lower draw order")
+	for extreme_y: float in [float(RenderingServer.CANVAS_ITEM_Z_MAX) + 1000.0, float(RenderingServer.CANVAS_ITEM_Z_MIN) - 1000.0]:
+		player.position.y = extreme_y
+		game.battle.outcome = BattleModel.Outcome.ESCAPED
+		game._finish_battle()
+		# フィールドを歩き、カメラが通常の追従位置へ戻った後の戦闘開始を再現する。
+		game.exploration.camera.position = Vector2.ZERO
+		game.exploration.camera.force_update_scroll()
+		game.begin_battle(MAPS.world.enemies[0])
+		await _frames(1)
+		var expected_z: int = RenderingServer.CANVAS_ITEM_Z_MAX if extreme_y > 0.0 else RenderingServer.CANVAS_ITEM_Z_MIN
+		_check(arena.enemy_body.z_index == expected_z and absf(arena.enemy_body.position.y) > RenderingServer.CANVAS_ITEM_Z_MAX, "Battle entry far outside the map safely clamps enemy draw order")
+	player.position = escaped_position
+	game.battle.outcome = BattleModel.Outcome.ESCAPED
+	game._finish_battle()
+	await _place("town", start)
+	_key(KEY_W, true)
+	await _frames(12)
+	_key(KEY_W, false)
+	_check(player.position.y >= config.tile_size + 8.5 and player.position.y < config.tile_size + 10.0, "Level ten remains blocked by field terrain")
+	config.escape_seconds = 0.08
+
+
 func _test_restart() -> void:
 	game.session.damage(8)
 	game.encounters.safe_remaining = 0.0
@@ -698,4 +812,5 @@ func _test_restart() -> void:
 	root.add_child(game)
 	_check(game.state == MainScript.State.EXPLORATION and game.exploration.visible, "Recreating the main scene immediately starts exploration")
 	_check(game.session.map_id == "world" and game.session.position == MAPS.world.spawn_position("start", config.tile_size) and game.session.hp == config.max_hp, "Restart resets HP and map position")
+	_check(game.session.level == 1 and game.session.experience == 0 and game.ui.level == 1 and game.ui.experience == 0, "Restart resets level and EXP in the session and HUD")
 	_check(game.encounters.safe_remaining == config.tile_size * config.safety_tiles and game.encounters.distance_remainder == 0.0, "Restart clears encounter remainder and restores safety")
