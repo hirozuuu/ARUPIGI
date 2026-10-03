@@ -1,6 +1,8 @@
 class_name GameUI
 extends Control
 
+enum BattleCommand { ESCAPE, ATTACK }
+
 const PAPER := Color("efe5cb")
 const INK := Color("172d32")
 const MUTED := Color("afb9ac")
@@ -88,8 +90,8 @@ func _experience_text() -> String:
 	return "EXP %d / %d" % [experience, next_level_experience]
 
 
-func _draw_status() -> void:
-	panel(Rect2(28, 24, 236, 118))
+func _draw_status(panel_width: float = 236.0) -> void:
+	panel(Rect2(28, 24, panel_width, 118))
 	text_at("HP  %02d / %02d" % [hp, max_hp], Vector2(45, 60), 22, GOLD)
 	text_at("Lv. %d" % level, Vector2(45, 89), 20, GOLD)
 	text_at(_experience_text(), Vector2(45, 118), 18)
@@ -104,13 +106,10 @@ func _draw_battle() -> void:
 	draw_rect(Rect2(r.end.x, r.position.y, maxf(0.0, size.x - r.end.x), r.size.y), shade)
 	if battle_boundary_visible:
 		draw_rect(r, PAPER, false, 3.0)
-	_draw_status()
+	_draw_status(188.0)
 	if battle_phase == "command":
-		panel(Rect2(28, 440, 272, 130))
-		option("こうげき", 55, 492, 0)
-		option("にげる", 55, 538, 1)
-		panel(Rect2(319, 440, 613, 130))
-		text_at(battle_text, Vector2(344, 482), 22)
-	else:
-		panel(Rect2(28, 440, 904, 130))
-		text_at(battle_text, Vector2(53, 482), 22)
+		panel(Rect2(28, 196, 188, 136))
+		option("にげる", 55, 248, BattleCommand.ESCAPE)
+		option("たたく", 55, 294, BattleCommand.ATTACK)
+	panel(Rect2(28, 520, 904, 108))
+	text_at(battle_text, Vector2(53, 550), 22)

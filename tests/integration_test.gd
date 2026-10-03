@@ -327,10 +327,11 @@ func _test_arena() -> void:
 	game.begin_battle(MAPS.world.enemies[0])
 	game._refresh_ui()
 	var arena: BattleArena = game.exploration.arena
+	_check(game.ui.selected == GameUI.BattleCommand.ESCAPE, "Battle starts with escape selected")
 	_check(game.exploration.visible and arena.active and player.global_position == before_world, "Battle retains the visible field and exact player world position")
 	_check(player.get_global_transform_with_canvas().origin.distance_to(before_screen) < 0.1 and absf(player.get_global_transform_with_canvas().basis_xform(Vector2.RIGHT).length() - before_size) < 0.01, "Battle start retains player screen position and size")
 	_check(game.exploration.map.get_global_transform_with_canvas().origin.distance_to(map_screen) < 0.1, "Battle start does not jump the background")
-	_check(absf(arena.screen_rect().size.x - arena.screen_rect().size.y) < 0.1 and absf(arena.screen_rect().size.x - 400.0) < 0.1, "Battle frame is a 400 pixel square at the reference size")
+	_check(absf(arena.screen_rect().size.x - arena.screen_rect().size.y) < 0.1 and absf(arena.screen_rect().size.x - 480.0) < 0.1, "Battle frame is a 480 pixel square at the reference size")
 	_check(player.collision_mask == BattleArena.BATTLE_LAYER and arena.enemy_body.collision_layer == BattleArena.BATTLE_LAYER, "Battle uses only arena and enemy collisions")
 	_check((arena.enemy_body.get_child(0) as CollisionShape2D).shape.size.distance_to(arena.enemy_rect.size) < 0.01, "Enemy collision square matches its configured visible size")
 	game.encounters.safe_remaining = 123.0
@@ -390,8 +391,10 @@ func _test_arena() -> void:
 	await _frames(2)
 	var small_screen_start := player.get_global_transform_with_canvas().origin
 	var small_size_start := player.get_global_transform_with_canvas().basis_xform(Vector2.RIGHT).length()
+	game.ui.selected = GameUI.BattleCommand.ATTACK
 	game.begin_battle(MAPS.world.enemies[0])
 	await _frames(1)
+	_check(game.ui.selected == GameUI.BattleCommand.ESCAPE, "A new battle resets the previous attack selection to escape")
 	_check(player.get_global_transform_with_canvas().origin.distance_to(small_screen_start) < 0.1 and absf(player.get_global_transform_with_canvas().basis_xform(Vector2.RIGHT).length() - small_size_start) < 0.01, "Battle start after resizing retains player screen position and size")
 	_check(absf(arena.screen_rect().size.x - arena.screen_rect().size.y) < 0.2 and arena.world_rect.size.x > 0.0, "Battle started after resizing retains a square frame in logical canvas coordinates")
 	_check_arena_display()
@@ -412,11 +415,11 @@ func _test_arena() -> void:
 		_key(side.key, false)
 		_check(player.position.x >= r.position.x + 8.5 and player.position.x <= r.end.x - 8.5 and player.position.y >= r.position.y + 8.5 and player.position.y <= r.end.y - 8.5, "Foot circle stays inside each arena edge")
 	player.position = Vector2(r.get_center().x + 100, r.position.y + 9.1)
-	game.ui.selected = 0
+	game.ui.selected = GameUI.BattleCommand.ATTACK
 	_key(KEY_W, true)
 	await _frames(3)
 	_key(KEY_W, false)
-	_check(game.ui.selected == 1 and player.position.y >= r.position.y + 8.5, "Blocked upward input still selects a command")
+	_check(game.ui.selected == GameUI.BattleCommand.ESCAPE and player.position.y >= r.position.y + 8.5, "Blocked upward input still selects escape")
 	var enemy_tests := [
 		{"position": Vector2(arena.enemy_rect.position.x - 20, arena.enemy_rect.get_center().y), "key": KEY_D},
 		{"position": Vector2(arena.enemy_rect.end.x + 20, arena.enemy_rect.get_center().y), "key": KEY_A},
@@ -515,7 +518,7 @@ func _check_arena_display() -> void:
 	var stretch := root.get_stretch_transform()
 	var expected_scale := minf(root.size.x / 960.0, root.size.y / 640.0)
 	var frame_size := stretch.basis_xform(arena.screen_rect().size)
-	_check(frame_size.distance_to(Vector2.ONE * 400.0 * expected_scale) < 0.2, "Arena is square at the expected size after window stretching")
+	_check(frame_size.distance_to(Vector2.ONE * 480.0 * expected_scale) < 0.2, "Arena is square at the expected size after window stretching")
 	var world_to_pixels := stretch * arena.get_global_transform_with_canvas()
 	var enemy_size := world_to_pixels.basis_xform(arena.enemy_rect.size)
 	_check(enemy_size.distance_to(Vector2.ONE * 96.0 * expected_scale) < 0.2, "Enemy collision remains square after window stretching")
@@ -540,6 +543,9 @@ func _test_battles() -> void:
 	var return_hp: int = game.session.hp
 	await _tap(KEY_ESCAPE)
 	_check(game.state == MainScript.State.BATTLE, "Esc cannot open a menu or end battle")
+	_check(game.ui.selected == GameUI.BattleCommand.ESCAPE, "A random encounter defaults to escape")
+	await _tap(KEY_DOWN)
+	_check(game.ui.selected == GameUI.BattleCommand.ATTACK, "Down selects the lower attack command")
 	config.attack_min = 100
 	config.attack_max = 100
 	_key(KEY_ENTER, true)
@@ -570,9 +576,10 @@ func _test_battles() -> void:
 	_key(KEY_ENTER, true, true)
 	_check(game.ui.battle_phase == "command" and game.battle.enemy_hp == game.battle.enemy.max_hp, "Enter held across battle entry does not choose a command")
 	_key(KEY_ENTER, false)
-	await _tap(KEY_DOWN)
+	_check(game.ui.selected == GameUI.BattleCommand.ESCAPE, "The next battle restores escape after attacking")
 	var hp_before: int = game.session.hp
 	await _tap(KEY_ENTER)
+	_check(game.escape_active and not game.ui.battle_boundary_visible and game.battle.enemy_hp == game.battle.enemy.max_hp, "Confirming the default command starts escape without attacking")
 	await _wait_messages()
 	_check(game.ui.battle_phase == "command" and game.battle.outcome == BattleModel.Outcome.ONGOING and game.session.hp < hp_before, "Failed escape retaliates and returns to command selection: phase=%s outcome=%s hp=%d before=%d" % [game.ui.battle_phase, game.battle.outcome, game.session.hp, hp_before])
 	await _frames(1)
@@ -599,6 +606,7 @@ func _test_battles() -> void:
 	config.encounter_chance = 0.0
 	config.attack_min = 1
 	config.attack_max = 1
+	await _tap(KEY_DOWN)
 	await _frames(1)
 	await _tap(KEY_ENTER)
 	await _wait_messages()
@@ -625,7 +633,6 @@ func _test_escape_movement() -> void:
 			edge.x += 110.0 # 敵を避けて上辺も横切る。
 		player.position = edge - direction * 30.0
 		await _frames(1)
-		game.ui.selected = 1
 		var hp_before: int = game.session.hp
 		await _tap(KEY_ENTER)
 		_check(game.escape_active and game.ui.battle_phase == "busy" and not game.ui.battle_boundary_visible, "Escape command immediately hides the boundary and locks commands")
@@ -660,7 +667,7 @@ func _test_escape_movement() -> void:
 		var edge := r.get_center() + direction * r.size * 0.5
 		if direction.y != 0.0:
 			edge.x += 110.0
-		game.ui.selected = 1
+		game.ui.selected = GameUI.BattleCommand.ESCAPE
 		game._run_action()
 		player.position = edge + direction * 2.0
 		game.escape_remaining = 0.01
@@ -680,7 +687,7 @@ func _test_escape_movement() -> void:
 		await _place("world", MAPS.world.spawn_position("start", config.tile_size))
 	game.begin_battle(MAPS.world.enemies[0])
 	game.session.hp = 1
-	game.ui.selected = 1
+	game.ui.selected = GameUI.BattleCommand.ESCAPE
 	game._run_action()
 	game.escape_remaining = 0.01
 	await _frames(1)
@@ -704,7 +711,7 @@ func _test_levels() -> void:
 	var base_distance := player.position.x - start.x
 	await _place("town", start)
 	game.begin_battle(MAPS.world.enemies[0])
-	game.ui.selected = 1
+	game.ui.selected = GameUI.BattleCommand.ESCAPE
 	game._run_action()
 	player.position.x = arena.world_rect.end.x + 40.0
 	await _frames(1)
@@ -762,7 +769,7 @@ func _test_levels() -> void:
 	_check(player.position.x <= arena.enemy_rect.position.x - 8.5, "Level ten cannot tunnel through the enemy")
 	config.escape_seconds = 1.3
 	player.position = Vector2(arena.world_rect.end.x - 60.0, arena.world_rect.get_center().y)
-	game.ui.selected = 1
+	game.ui.selected = GameUI.BattleCommand.ESCAPE
 	game._run_action()
 	_key(KEY_D, true)
 	await _frames(3)

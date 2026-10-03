@@ -211,14 +211,14 @@ func begin_battle(foe: EnemyData) -> void:
 	battle.setup(foe)
 	exploration.begin_battle(foe)
 	_set_state(State.BATTLE)
-	ui.selected = 0
+	ui.selected = GameUI.BattleCommand.ESCAPE
 	ui.battle_phase = "command"
 	ui.battle_text = "%s！" % foe.display_name
 	ui.flash = 0
 
 func _run_action() -> void:
 	ui.battle_phase = "busy"
-	if ui.selected == 1:
+	if ui.selected == GameUI.BattleCommand.ESCAPE:
 		escape_active = true
 		escape_remaining = maxf(0.05, CONFIG.escape_seconds)
 		exploration.arena.set_boundary_enabled(false)

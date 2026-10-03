@@ -17,6 +17,7 @@ func _run() -> void:
 	await _capture("menu")
 	game._set_state(game.State.EXPLORATION)
 	game.begin_battle(game.MAPS.world.enemies[0])
+	assert(game.ui.selected == GameUI.BattleCommand.ESCAPE)
 	await _capture("world_battle")
 	var start: Vector2 = game.exploration.player.position
 	var arena: BattleArena = game.exploration.arena
@@ -28,9 +29,8 @@ func _run() -> void:
 	_key(KEY_W, true, true)
 	await _frames(4)
 	_key(KEY_W, false)
-	assert(game.ui.selected == 1 and game.exploration.player.position.y < start.y - 20.0)
+	assert(game.ui.selected == GameUI.BattleCommand.ATTACK and game.exploration.player.position.y < start.y - 20.0)
 	await _capture("battle_move")
-	game.ui.selected = 0
 	game._run_action()
 	await _capture("battle_action")
 	game.battle.enemy_hp = 1
@@ -42,7 +42,7 @@ func _run() -> void:
 	await _capture("victory_result")
 	game._finish_battle()
 	game.begin_battle(game.MAPS.world.enemies[0])
-	game.ui.selected = 1
+	game.ui.selected = GameUI.BattleCommand.ESCAPE
 	game._run_action()
 	game.exploration.player.position.x = arena.world_rect.end.x - 10.0
 	game._refresh_ui()
@@ -63,7 +63,7 @@ func _run() -> void:
 	root.size = Vector2i(960, 640)
 	game._finish_battle()
 	game.begin_battle(game.MAPS.world.enemies[0])
-	game.ui.selected = 1
+	game.ui.selected = GameUI.BattleCommand.ESCAPE
 	game._run_action()
 	game.exploration.player.position.x = arena.world_rect.end.x + 40.0
 	await _frames(2)
@@ -72,7 +72,7 @@ func _run() -> void:
 	game._finish_battle()
 	game.begin_battle(game.MAPS.world.enemies[0])
 	game.exploration.player.position = arena.world_rect.get_center() + Vector2(0.0, 100.0)
-	game.ui.selected = 1
+	game.ui.selected = GameUI.BattleCommand.ESCAPE
 	game._run_action()
 	game.escape_remaining = 0.01
 	await _frames(2)
@@ -153,7 +153,7 @@ func _run() -> void:
 	await _capture("level_max_menu")
 	game._set_state(game.State.EXPLORATION)
 	game.begin_battle(game.MAPS.dungeon.enemies[0])
-	game.ui.selected = 1
+	game.ui.selected = GameUI.BattleCommand.ESCAPE
 	game._run_action()
 	game.exploration.player.position.x = arena.world_rect.end.x + 40.0
 	await _frames(2)

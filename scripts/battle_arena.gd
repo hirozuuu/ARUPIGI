@@ -2,8 +2,8 @@ class_name BattleArena
 extends Node2D
 ## One fixed world-space arena shared by the physics bodies and the overlay.
 
-const BASE_RECT := Rect2(280.0, 20.0, 400.0, 400.0)
-const BASE_ENEMY_CENTER := Vector2(480.0, 150.0)
+const BASE_RECT := Rect2(240.0, 24.0, 480.0, 480.0)
+const BASE_ENEMY_CENTER := Vector2(480.0, 190.0)
 const BASE_ENEMY_SIZE := 96.0
 const BATTLE_LAYER := 2
 
